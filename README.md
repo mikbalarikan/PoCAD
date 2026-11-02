@@ -1,3 +1,5 @@
+<img src="assets/pocad-logo.svg" alt="PoCAD" width="220">
+
 # PoCAD — Phone CAD istasyonu
 
 Eski bir Android telefonu, **Claude Code + build123d + agentcad** ile çalışan tek projelik bir
@@ -21,6 +23,10 @@ Claude ile sohbet yan yana durur. Uygulama değiştirmeden tasarımı yönetirsi
   önizleme, geometri doğrulaması ve sürüm geçmişi sağlar.
 - **İstasyon sayfası** (`cad-chat`): Görüntüleyici ve sohbet tek sayfada.
   Mesajlar dosya üzerinden Claude oturumuna gider; Claude `cad-reply` ile cevap verir.
+  Tasarım Türkişi Engineering kimliğinde (palet v5, maskot B · Kumpas, PoCAD logosu):
+  sürüm şeridi (ölçüler, hacim, doğrulama damgası), Sohbet / Doğrulama (`verify_report.txt`) /
+  Çıktılar (dokununca indirilir) sekmeleri, Parlak Set'ten proje başına vurgu rengi ve
+  arayüze not bırakmak için **İşaretle** modu (agentation usulü; not, seçicisiyle sohbete gider).
 - **Teslim:** `pocad deliver` komutu `/sdcard/PoCAD/<proje>/` klasörüne `cikti/` (STL/STEP/GLB)
   ve `src/` (kaynak + spec) dosyalarını koyar.
 
