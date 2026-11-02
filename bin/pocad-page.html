@@ -1,0 +1,511 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D161F">
+<title>__NAME__ · PoCAD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Düzen: atölye tezgâhı. Üstte kimlik şeridi, solda (telefonda üstte) katmanlı lacivert çelik CAD sahnesi,
+   sağda (telefonda altta) sohbet / doğrulama / çıktılar. Renkler brand/palette.json v5 (F05 + Parlak Set):
+   zemin lacivert çelik, yazı krom/gümüş, yapı çelik mavisi, kırmızı yalnız kimlik (<%3),
+   sahnede TEK parlak vurgu (--vurgu, Parlak Set'ten seçilir; üstüne Derin yazılır).
+   Tek tema: kanal kimliği koyu; Kağıt yalnız teknik resim sayfası için. */
+:root{
+  color-scheme:dark;
+  /* zemin */
+  --gece:#070C11; --derin:#0D161F; --zemin:#141F2B; --panel:#202E3C; --gunmetal:#394A5A;
+  /* metal */
+  --titanyum:#808E9B; --gumus:#B7C3CD; --krom:#ECF1F5;
+  /* yapı / kimlik / durum */
+  --celik:#39659B; --kimlik:#AF1537; --gecti:#46D193; --hata:#FB5F64;
+  /* 3B */
+  --parca:#EEF3FA;
+  /* sahnenin tek parlak vurgusu (varsayılan Fosfor Sarısı; JS değiştirir) */
+  --vurgu:#E6FF1F; --vurgu-ink:#0D161F;
+  --bg:var(--zemin); --fg:var(--krom); --soluk:var(--gumus);
+  --f-display:'Archivo','Bahnschrift','Arial Narrow',sans-serif;
+  --f-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',monospace;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body);display:flex;flex-direction:column;overflow:hidden}
+button,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--vurgu);outline-offset:2px}
+code{font:500 .86em var(--f-mono);background:var(--derin);padding:1px 5px;border-radius:4px;color:var(--krom)}
+
+/* ── kimlik şeridi ── */
+.ust{flex:none;display:flex;align-items:center;gap:12px;padding-block:8px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--derin);border-bottom:1px solid var(--gunmetal);position:relative}
+.ust::after{content:"";position:absolute;left:0;bottom:-1px;width:min(220px,40%);height:3px;background:var(--kimlik)}
+.kilit{display:flex;align-items:center;gap:9px;flex:none}
+.kilit svg{width:36px;height:36px;flex:none}
+.kelime{line-height:.9}
+.kelime b{display:block;font:900 19px/0.9 var(--f-display);font-stretch:100%;letter-spacing:-.01em;color:var(--krom)}
+.kelime span{display:block;font:700 8.5px var(--f-mono);letter-spacing:.42em;color:var(--gumus);margin-top:3px}
+.ayrac{width:1px;align-self:stretch;background:var(--gunmetal);margin-block:2px}
+.proje{min-width:0;flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden}
+.proje small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;text-transform:none!important;letter-spacing:.06em!important}
+.pocad-logo{display:block;width:94px;height:25px;flex:none}
+.proje small{font:700 10px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--titanyum)}
+.proje strong{font:800 16px var(--f-display);font-stretch:85%;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sag{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none}
+.durum{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font:700 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--gunmetal);background:var(--zemin);color:var(--gecti)}
+.durum i{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 22%,transparent)}
+.durum[data-s="calisiyor"]{color:var(--vurgu)}
+.durum[data-s="calisiyor"] i{animation:nabiz 1s infinite}
+.durum[data-s="yok"]{color:var(--hata)}
+.ikon-btn,.isaret-btn{height:36px;border-radius:10px;border:1px solid var(--gunmetal);background:var(--panel)}
+.ikon-btn{display:inline-grid;place-items:center;width:36px;padding:0}
+.ikon-btn i{width:16px;height:16px;border-radius:50%;background:var(--vurgu);box-shadow:0 0 0 2px var(--derin),0 0 0 3px var(--gunmetal)}
+.isaret-btn{display:inline-flex;align-items:center;gap:6px;padding:0 12px;font:700 12px var(--f-mono);letter-spacing:.05em;text-transform:uppercase}
+.isaret-btn[aria-pressed="true"]{background:var(--vurgu);border-color:var(--vurgu);color:var(--vurgu-ink)}
+.isaret-btn .say{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--vurgu);color:var(--vurgu-ink);font-size:10px;display:inline-grid;place-items:center}
+.isaret-btn[aria-pressed="true"] .say{background:var(--derin);color:var(--krom)}
+.isaret-btn .say:empty{display:none}
+
+/* vurgu seçici */
+.renkler{position:fixed;z-index:45;top:calc(58px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--derin);border:1px solid var(--gunmetal);border-radius:14px;padding:12px;width:min(300px,calc(100vw - 32px));box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.renkler h4{margin:0 0 2px;font:900 15px var(--f-display);font-stretch:80%;text-transform:uppercase;letter-spacing:.03em}
+.renkler p{margin:0 0 10px;font-size:12px;color:var(--gumus)}
+.renkler .izgara4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.renkler button{border:1px solid var(--gunmetal);background:var(--zemin);border-radius:10px;padding:6px 4px 5px;display:flex;flex-direction:column;align-items:center;gap:4px;font:600 9.5px/1.15 var(--f-mono);color:var(--gumus);text-align:center}
+.renkler button i{width:26px;height:26px;border-radius:7px;display:block}
+.renkler button[aria-pressed="true"]{border-color:var(--krom);color:var(--krom);box-shadow:0 0 0 2px var(--derin) inset}
+
+/* ── çalışma alanı ── */
+.tezgah{flex:1;min-height:0;display:flex;flex-direction:column}
+@media (min-width:900px){.tezgah{flex-direction:row}}
+
+/* sahne: F05 katmanlı lacivert çelik */
+.sahne{position:relative;flex:0 0 var(--vh,46%);min-height:0;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 38%,#1B2A39 0%,var(--zemin) 45%,var(--derin) 100%)}
+@media (min-width:900px){.sahne{flex:1 1 auto}}
+.sahne canvas{position:relative;display:block;width:100%;height:100%;touch-action:none}
+.sahne .izgara{position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(color-mix(in srgb,var(--gunmetal) 30%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--gunmetal) 30%,transparent) 1px,transparent 1px);
+  background-size:28px 28px;mask-image:radial-gradient(ellipse at 50% 62%,#000 25%,transparent 78%);-webkit-mask-image:radial-gradient(ellipse at 50% 62%,#000 25%,transparent 78%)}
+.sahne-ust{position:absolute;z-index:2;top:10px;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));display:flex;gap:8px;align-items:flex-start;pointer-events:none}
+.etiket{pointer-events:auto;font:700 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border-radius:6px;
+  background:var(--celik);color:var(--krom)}
+.etiket b{color:var(--krom)}
+.damga{margin-left:auto;pointer-events:auto;transform:rotate(-4deg);border:2.5px solid var(--gecti);color:var(--gecti);border-radius:8px;padding:4px 10px 3px;
+  font:900 13px/1.05 var(--f-display);font-stretch:80%;text-transform:uppercase;letter-spacing:.04em;text-align:center;background:color-mix(in srgb,var(--derin) 70%,transparent)}
+.damga small{display:block;font:700 10px var(--f-mono);letter-spacing:.08em}
+.arac{position:absolute;z-index:2;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:3px;border-radius:12px;
+  background:color-mix(in srgb,var(--derin) 90%,transparent);border:1px solid var(--gunmetal);backdrop-filter:blur(6px)}
+.arac button{border:0;background:transparent;color:var(--gumus);height:34px;padding:0 11px;border-radius:9px;font:700 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.arac button[aria-pressed="true"]{background:var(--celik);color:var(--krom)}
+.olcu{position:absolute;z-index:2;right:max(12px,env(safe-area-inset-right,0px));bottom:58px;font:500 11px/1.5 var(--f-mono);color:var(--gumus);text-align:right;pointer-events:none;font-variant-numeric:tabular-nums}
+.olcu b{color:var(--vurgu);font-weight:700}
+.eksen{position:absolute;z-index:2;left:max(10px,env(safe-area-inset-left,0px));bottom:52px;width:62px;height:62px;pointer-events:none}
+.yukleniyor{position:absolute;inset:0;display:grid;place-items:center;font:700 12px var(--f-mono);letter-spacing:.1em;color:var(--gumus);text-transform:uppercase}
+.boyut{position:absolute;z-index:2;top:50px;right:max(12px,env(safe-area-inset-right,0px))}
+@media (min-width:900px){.boyut{display:none}}
+.boyut button{width:34px;height:34px;border-radius:9px;border:1px solid var(--gunmetal);background:color-mix(in srgb,var(--derin) 85%,transparent);color:var(--krom);font:700 14px var(--f-mono)}
+
+/* yan panel */
+.yan{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--zemin);border-top:1px solid var(--gunmetal)}
+@media (min-width:900px){.yan{flex:0 0 420px;border-top:0;border-left:1px solid var(--gunmetal)}}
+.sekmeler{flex:none;display:flex;gap:4px;padding-block:8px 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--gunmetal);background:var(--derin)}
+.sekmeler button{border:0;background:transparent;padding:8px 10px 10px;font:800 13px var(--f-display);font-stretch:88%;letter-spacing:.04em;text-transform:uppercase;color:var(--titanyum);border-bottom:3px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:6px}
+.sekmeler button[aria-selected="true"]{color:var(--krom);border-bottom-color:var(--celik)}
+.rozet{font:700 10px var(--f-mono);padding:1px 6px;border-radius:5px;background:var(--panel);color:var(--gumus)}
+.gorunum{flex:1;min-height:0;overflow-y:auto;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* sohbet */
+.log{display:flex;flex-direction:column;gap:12px}
+.gun{align-self:center;font:700 10px var(--f-mono);letter-spacing:.12em;color:var(--titanyum);text-transform:uppercase}
+.m{display:flex;gap:8px;max-width:92%;min-width:0}
+.m .av{flex:none;width:30px;height:30px;border-radius:8px;background:var(--derin);border:1px solid var(--gunmetal);display:grid;place-items:center}
+.m .av svg{width:24px;height:24px}
+.m .b{min-width:0;padding:9px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel);color:var(--krom)}
+.m.claude .b{border-top-left-radius:4px}
+.m.ben{align-self:flex-end}
+.m.ben .b{background:var(--celik);color:var(--krom);border-top-right-radius:4px}
+.m .t{display:flex;align-items:center;gap:6px;margin-top:4px;font:500 10px var(--f-mono);color:var(--gumus)}
+.m.ben .t{color:color-mix(in srgb,var(--krom) 75%,transparent)}
+.yeni{font:800 9.5px var(--f-mono);letter-spacing:.08em;padding:1px 6px;border-radius:4px;background:var(--vurgu);color:var(--vurgu-ink)}
+.m.ben code{background:color-mix(in srgb,var(--derin) 45%,transparent)}
+.kosu{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.cip{font:700 10.5px var(--f-mono);letter-spacing:.03em;padding:3px 7px;border-radius:6px;background:var(--derin);color:var(--gumus);font-variant-numeric:tabular-nums}
+.cip.ok{color:var(--gecti)}
+.cip.ok::before{content:"✓ "}
+.cip.not::before{content:"! ";color:var(--krom)}
+.cip.not{color:var(--krom);box-shadow:inset 0 0 0 1px var(--gunmetal)}
+.cip.yeni-cip{background:var(--vurgu);color:var(--vurgu-ink)}
+.bekle{display:flex;align-items:center;gap:10px;color:var(--gumus);font-size:13px}
+.lcd{width:46px;height:22px;border-radius:5px;background:#0E1A12;border:2px solid var(--gece);display:flex;align-items:center;justify-content:center;gap:5px}
+.lcd i{width:6px;height:9px;background:var(--vurgu);border-radius:1px;animation:goz 2.4s infinite}
+.lcd i:nth-child(2){animation-delay:.12s}
+
+.yaz{flex:none;padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-top:1px solid var(--gunmetal);background:var(--derin)}
+.hizli{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.hizli button{flex:none;border:1px solid var(--gunmetal);background:var(--panel);border-radius:999px;padding:5px 11px;font-size:12.5px;white-space:nowrap;color:var(--krom)}
+.hizli button:hover{border-color:var(--gumus)}
+.form{display:flex;gap:8px;align-items:flex-end}
+.form textarea{flex:1;min-width:0;resize:none;max-height:120px;padding:10px 13px;border-radius:12px;border:1px solid var(--gunmetal);background:var(--zemin);line-height:1.35}
+.form textarea::placeholder{color:var(--titanyum)}
+.form textarea:focus{outline:none;border-color:var(--gumus)}
+.gonder{flex:none;height:42px;padding:0 16px;border:0;border-radius:12px;background:var(--vurgu);color:var(--vurgu-ink);font:800 13px var(--f-display);font-stretch:85%;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+
+/* doğrulama */
+.bas{font:900 22px/1.05 var(--f-display);font-stretch:78%;text-transform:uppercase;letter-spacing:.01em;margin:0 0 4px;text-wrap:balance}
+.alt{color:var(--gumus);font-size:13px;margin:0 0 14px}
+.ozet{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.ozet div{background:var(--panel);border-radius:10px;padding:9px 10px;min-width:0}
+.ozet small{display:block;font:700 9.5px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--gumus)}
+.ozet b{font:800 20px var(--f-display);font-stretch:85%;font-variant-numeric:tabular-nums}
+.ozet .birim{display:inline;font:600 11px var(--f-mono);color:var(--gumus);letter-spacing:0;text-transform:none}
+.kontrol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:var(--derin)}
+.kontrol li{display:grid;grid-template-columns:4.6em 1fr;gap:3px 10px;padding:10px 12px;border-top:1px solid var(--panel)}
+.kontrol li:first-child{border-top:0}
+.kontrol .s{grid-row:span 2;align-self:start;font:700 10px var(--f-mono);padding:3px 0;border-radius:5px;letter-spacing:.04em;text-align:center}
+.s.pass{background:color-mix(in srgb,var(--gecti) 16%,transparent);color:var(--gecti)}
+.s.kabul{color:var(--krom);box-shadow:inset 0 0 0 1px var(--gumus)}
+.kontrol .n{font-weight:600}
+.kontrol .v{font:500 12px var(--f-mono);color:var(--gumus);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.not{margin-top:12px;font-size:13px;color:var(--gumus);border-left:3px solid var(--celik);padding:2px 0 2px 10px}
+
+/* çıktılar */
+.dosyalar{display:flex;flex-direction:column;gap:8px}
+.dosya{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;background:var(--panel);border-radius:12px}
+.dosya .uz{height:44px;border-radius:9px;display:grid;place-items:center;font:800 10.5px var(--f-mono);background:var(--celik);color:var(--krom)}
+.dosya b{display:block;font:600 14px var(--f-mono)}
+.dosya small{color:var(--gumus);font-size:12px}
+.dosya span{font:500 11px var(--f-mono);color:var(--gumus);font-variant-numeric:tabular-nums}
+.teslim{margin-top:14px;width:100%;height:48px;border-radius:12px;border:0;background:var(--kimlik);color:var(--krom);font:800 14px var(--f-display);font-stretch:85%;letter-spacing:.06em;text-transform:uppercase}
+.yol{font:500 12px var(--f-mono);color:var(--titanyum);margin-top:8px;text-align:center}
+
+/* ── işaretleme modu (agentation usulü) ── */
+body.isaretle [data-ui]{cursor:crosshair}
+/* "şuraya bak" = palet v5 parlak gümüş çerçeve: Derin dış kenar + Krom çizgi + Derin iç kenar */
+body.isaretle .vurgu{outline:3px solid var(--krom)!important;outline-offset:2px;box-shadow:0 0 0 2px var(--derin),0 0 0 7px var(--derin),0 0 18px 6px color-mix(in srgb,var(--krom) 35%,transparent)!important}
+.isaret-ipucu{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));z-index:30;background:var(--vurgu);color:var(--vurgu-ink);
+  font:700 12px var(--f-mono);letter-spacing:.04em;padding:7px 12px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.45);white-space:nowrap}
+.sayfa{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--derin);border-top:1px solid var(--gunmetal);border-radius:16px 16px 0 0;
+  box-shadow:0 -12px 40px rgba(0,0,0,.5);padding-block:14px calc(14px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-height:75%;overflow-y:auto}
+@media (min-width:900px){.sayfa{left:auto;right:16px;bottom:16px;width:400px;border-radius:16px;border:1px solid var(--gunmetal)}}
+.sayfa h3{margin:0 0 2px;font:900 18px var(--f-display);font-stretch:80%;text-transform:uppercase}
+.secici{font:500 11.5px var(--f-mono);color:var(--gumus);background:var(--zemin);border-radius:8px;padding:6px 8px;margin:8px 0;overflow-wrap:anywhere}
+.sayfa label{font-size:12px;color:var(--gumus)}
+.sayfa textarea{width:100%;min-height:84px;resize:vertical;padding:10px 12px;border-radius:10px;border:1px solid var(--gunmetal);background:var(--zemin)}
+.sayfa .dugmeler{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sayfa .dugmeler button{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--gunmetal);background:var(--panel);font:700 12px var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
+.sayfa .dugmeler .ana{background:var(--vurgu);border-color:var(--vurgu);color:var(--vurgu-ink);margin-left:auto}
+.notlar{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.notlar li{border-radius:10px;padding:8px 10px;background:var(--zemin);display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.notlar li b{font:700 12px var(--f-mono);color:var(--gumus)}
+.notlar li p{grid-column:1;margin:0;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.notlar li button{grid-row:1/span 2;grid-column:2;align-self:center;border:1px solid var(--gunmetal);background:transparent;border-radius:8px;height:30px;padding:0 9px;font:700 10px var(--f-mono)}
+.bos{color:var(--gumus);font-size:13px;margin:10px 0 0}
+.tost{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--krom);color:var(--derin);padding:8px 14px;border-radius:10px;font:600 13px var(--f-body)}
+
+@keyframes nabiz{50%{opacity:.35}}
+@keyframes goz{0%,88%,100%{transform:scaleY(1)}93%{transform:scaleY(.1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:560px){.isaret-btn .yazi{display:none}.isaret-btn{padding:0 9px}.durum{padding:0;width:36px;height:36px;justify-content:center;border-radius:10px}.durum #durumYazi{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.ust{gap:9px}}
+@media (max-width:420px){.kelime b{font-size:16px}.kelime span{font-size:7px;letter-spacing:.3em}.ayrac{display:none}.pocad-logo{width:82px;height:22px}}
+@media (max-width:360px){.kilit .kelime{display:none}}
+
+/* ── istasyon eklentileri ── */
+html,body{margin:0}
+.sahne{display:flex;flex-direction:column}
+.sahne-bar{flex:none;min-height:40px;display:flex;align-items:center;gap:8px;padding-block:6px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));
+  background:var(--derin);border-bottom:1px solid var(--gunmetal);font:500 11.5px var(--f-mono);color:var(--gumus);min-width:0;font-variant-numeric:tabular-nums}
+.sahne-bar .etiket{flex:none}
+.sahne-bar .olcu-yazi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sahne-bar .olcu-yazi b{color:var(--vurgu);font-weight:700}
+.sahne-bar .damga2{flex:none;margin-left:auto;font:800 10.5px var(--f-mono);letter-spacing:.05em;padding:3px 8px;border-radius:6px;text-transform:uppercase;white-space:nowrap}
+.damga2.ok{color:var(--gecti);box-shadow:inset 0 0 0 1.5px var(--gecti)}
+.damga2.fail{color:var(--hata);box-shadow:inset 0 0 0 1.5px var(--hata)}
+.damga2.yok{color:var(--titanyum);box-shadow:inset 0 0 0 1px var(--gunmetal)}
+.sahne-bar .boy{flex:none;width:30px;height:28px;border-radius:8px;border:1px solid var(--gunmetal);background:var(--panel);color:var(--krom);font:700 13px var(--f-mono)}
+@media (min-width:900px){.sahne-bar .boy{display:none}}
+.kare{position:relative;flex:1;min-height:0}
+.kare iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--zemin)}
+.kare iframe.pending{opacity:0;pointer-events:none}
+.uyari-serit{position:absolute;z-index:3;left:12px;right:12px;bottom:12px;padding:8px 12px;border-radius:10px;background:var(--derin);border:1px solid var(--hata);color:var(--krom);font-size:13px}
+.uyari-serit b{color:var(--hata)}
+.kontrol .s.fail{background:color-mix(in srgb,var(--hata) 16%,transparent);color:var(--hata)}
+.kontrol .s.warn{color:var(--krom);box-shadow:inset 0 0 0 1px var(--gumus)}
+.dosya{color:inherit;text-decoration:none}
+.dosya:hover{box-shadow:inset 0 0 0 1px var(--gumus)}
+.bos-durum{color:var(--gumus);font-size:13.5px;background:var(--derin);border-radius:12px;padding:14px}
+.bos-durum b{display:block;color:var(--krom);font:800 15px var(--f-display);font-stretch:85%;text-transform:uppercase;margin-bottom:4px}
+.m .b a{color:var(--elektrik-isigi,#64BFFF)}
+</style></head><body>
+
+<!-- maskot B · KUMPAS (sadeleştirilmiş): Neon Kırmızı gövde, LCD yüz, cetvel kol, çene bacak, Oğuz Kırmızısı vida -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="kumpas" viewBox="0 0 64 64">
+      <rect x="27" y="2" width="10" height="58" rx="2" fill="#B7C3CD" stroke="#070C11" stroke-width="2.5"/>
+      <g stroke="#070C11" stroke-width="1.4"><path d="M29 8h4M29 13h6M29 18h4M29 23h6"/></g>
+      <rect x="8" y="22" width="48" height="28" rx="7" fill="#FF3347" stroke="#070C11" stroke-width="3"/>
+      <rect x="14" y="27" width="36" height="15" rx="3" fill="#0E1A12" stroke="#070C11" stroke-width="2"/>
+      <rect x="21" y="31" width="5" height="7" rx="1" fill="#5CFFB8"/><rect x="38" y="31" width="5" height="7" rx="1" fill="#5CFFB8"/>
+      <path d="M14 50v10l5-3V50M50 50v10l-5-3V50" fill="#ECF1F5" stroke="#070C11" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="32" cy="46.5" r="2.4" fill="#AF1537" stroke="#070C11" stroke-width="1.5"/>
+    </symbol>
+    <symbol id="pocad" viewBox="0 0 180 48">
+  <!-- PoCAD logo · palet v5: Çelik Mavisi telefon gövdesi, Krom kenar, Gümüş/Krom harfler, Fosfor Sarısı yeni yüz -->
+  
+  <!-- işaret: telefon + izometrik küp -->
+  <rect x="3" y="2" width="28" height="44" rx="6" fill="#39659B" stroke="#ECF1F5" stroke-width="2.5"/>
+  <rect x="13" y="5.5" width="8" height="2" rx="1" fill="#0D161F"/>
+  <g stroke="#0D161F" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M17 14 L26 19 L17 24 L8 19 Z" fill="#E6FF1F"/>
+    <path d="M8 19 L17 24 L17 35 L8 30 Z" fill="#EEF3FA"/>
+    <path d="M26 19 L17 24 L17 35 L26 30 Z" fill="#B7C3CD"/>
+  </g>
+  <!-- yazı: geometrik çizgi harfler (fonttan bağımsız) -->
+  <g fill="none" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M45 43 V6 H56 a9.5 9.5 0 0 1 0 19 H45" stroke="#B7C3CD"/>
+    <rect x="76" y="19" width="15" height="24" rx="7.5" stroke="#B7C3CD"/>
+    <path d="M124 12 A13 18.5 0 1 0 124 37" stroke="#ECF1F5"/>
+    <path d="M131 43 L140.5 6 L150 43 M134.5 31 H146.5" stroke="#ECF1F5"/>
+    <path d="M159 6 V43 H162 a11 18.5 0 0 0 0 -37 Z" stroke="#ECF1F5"/>
+  </g>
+</symbol>
+  </defs>
+</svg>
+
+<header class="ust" data-ui="kimlik-seridi">
+  <div class="kilit" data-ui="logo">
+    <svg><use href="#kumpas"/></svg>
+    <div class="kelime"><b>TÜRKİŞİ</b><span>ENGINEERING</span></div>
+  </div>
+  <div class="ayrac"></div>
+  <div class="proje" data-ui="pocad-logo"><svg class="pocad-logo" role="img" aria-label="PoCAD"><use href="#pocad"/></svg><small>proje · __NAME__</small></div>
+  <div class="sag">
+    <span class="durum" id="durum" data-s="bagli" data-ui="baglanti-durumu"><i></i><span id="durumYazi">bağlanıyor</span></span>
+    <button class="isaret-btn" id="isaretBtn" aria-pressed="false" data-ui="isaretle-dugmesi" title="Arayüze not bırak">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
+      <span class="yazi">İşaretle</span>
+    </button>
+    <button class="ikon-btn" id="vurguBtn" aria-label="Sahnenin vurgu rengi" aria-expanded="false" data-ui="vurgu-secici"><i></i></button>
+  </div>
+</header>
+
+<main class="tezgah">
+  <section class="sahne" id="sahne" data-ui="cad-goruntuleyici">
+    <div class="sahne-bar" data-ui="surum-seridi">
+      <span class="etiket" id="surum">model yok</span>
+      <span class="olcu-yazi" id="olcu"></span>
+      <span class="damga2 yok" id="damga" data-ui="dogrulama-damgasi">rapor yok</span>
+      <button class="boy" id="boyBtn" aria-label="Model alanının boyunu değiştir">↕</button>
+    </div>
+    <div class="kare" id="kare"></div>
+  </section>
+
+  <section class="yan">
+    <div class="sekmeler" role="tablist" data-ui="sekmeler">
+      <button role="tab" aria-selected="true" data-tab="sohbet">Sohbet</button>
+      <button role="tab" aria-selected="false" data-tab="dogrulama">Doğrulama <span class="rozet" id="rozDog">–</span></button>
+      <button role="tab" aria-selected="false" data-tab="cikti">Çıktılar <span class="rozet" id="rozCik">–</span></button>
+    </div>
+
+    <div class="gorunum" id="g-sohbet" data-ui="sohbet-akisi"><div class="log" id="log"></div></div>
+
+    <div class="gorunum" id="g-dogrulama" hidden data-ui="dogrulama-paneli">
+      <h2 class="bas" id="dogBas">Doğrulama</h2>
+      <p class="alt" id="dogAlt">verify_report.txt</p>
+      <div class="ozet" id="ozet" data-ui="dogrulama-ozeti"></div>
+      <ul class="kontrol" id="kontrol" data-ui="kontrol-listesi"></ul>
+      <div class="bos-durum" id="dogBos" hidden><b>Rapor yok</b>Doğrulama scripti proje köküne <code>verify_report.txt</code> yazınca burada görünür (<code>[PASS] ad: değer</code> satırları).</div>
+    </div>
+
+    <div class="gorunum" id="g-cikti" hidden data-ui="ciktilar-paneli">
+      <h2 class="bas">Çıktılar</h2>
+      <p class="alt" id="cikAlt">Son başarılı sürümün dosyaları. Dokununca telefona indirilir.</p>
+      <div class="dosyalar" id="dosyalar" data-ui="dosya-listesi"></div>
+      <div class="bos-durum" id="cikBos" hidden><b>Henüz çıktı yok</b>İlk başarılı <code>agentcad run</code> sonrası STEP, STL, GLB ve önizleme burada.</div>
+      <button class="teslim" id="teslimBtn" data-ui="teslim-dugmesi">Teslim et</button>
+      <div class="yol">Claude'a teslim mesajı gönderir → /sdcard/PoCAD/__NAME__/</div>
+    </div>
+
+    <div class="yaz" data-ui="mesaj-alani">
+      <div class="hizli" data-ui="hizli-komutlar">
+        <button data-q="Önizleme PNG'sini göster ve kontrol et">Önizleme</button>
+        <button data-q="Doğrulamayı tekrar çalıştır, sonucu özetle">Doğrulamayı çalıştır</button>
+        <button data-q="Son sürümün ölçülerini ve parametrelerini listele">Ölçüler</button>
+        <button data-q="Bir önceki sürümle farkı göster">Farkı göster</button>
+      </div>
+      <form class="form" id="f">
+        <label for="q" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Mesaj</label>
+        <textarea id="q" rows="1" placeholder="Claude'a yaz… ölçü, değişiklik, soru"></textarea>
+        <button class="gonder" id="s">Gönder
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div class="renkler" id="renkler" hidden role="dialog" aria-labelledby="renkBaslik" data-ui="vurgu-paneli">
+  <h4 id="renkBaslik">Sahne vurgusu</h4>
+  <p>Palet v5 Parlak Set: sahnede tek parlak renk. Bu proje için seç.</p>
+  <div class="izgara4" id="renkIzgara"></div>
+</div>
+<div class="isaret-ipucu" id="ipucu" hidden>Not bırakmak istediğin yere dokun</div>
+<div class="sayfa" id="notSayfa" hidden role="dialog" aria-labelledby="notBaslik">
+  <h3 id="notBaslik">Arayüz notu</h3>
+  <div class="alt" id="notHedef" style="margin:0"></div>
+  <div class="secici" id="notSecici"></div>
+  <label for="notMetin">Ne değişsin? Not sohbete Claude'a gider.</label>
+  <textarea id="notMetin" placeholder="ör. Bu şerit daha büyük olsun"></textarea>
+  <div class="dugmeler">
+    <button id="notIptal" type="button">Vazgeç</button>
+    <button id="notKaydet" class="ana" type="button">Claude'a gönder</button>
+  </div>
+</div>
+<div class="tost" id="tost" hidden></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tost=t=>{const e=$('#tost');e.textContent=t;e.hidden=false;clearTimeout(tost.h);tost.h=setTimeout(()=>e.hidden=true,2400);};
+const isaretMod=()=>document.body.classList.contains('isaretle');
+
+/* ── vurgu (palet v5 accent.set) ── */
+const SET=[['fosfor_sarisi','Fosfor Sarısı','#E6FF1F'],['neon_camgobegi','Neon Camgöbeği','#00E5FF'],['parca_mandalina','Neon Mandalina','#FF9A4D'],['asit_lime','Asit Lime','#9DFF2E'],
+ ['neon_kirmizi','Neon Kırmızı','#FF3347'],['mercan_kirmizi','Mercan Kırmızı','#FF5F57'],['elektrik_mor','Elektrik Mor','#B07CFF'],['neon_magenta','Neon Magenta','#FF4FB0']];
+function vurgu(k){const v=SET.find(x=>x[0]===k)||SET[0];document.documentElement.style.setProperty('--vurgu',v[2]);
+  document.querySelectorAll('#renkIzgara button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===v[0]));try{localStorage.setItem('pocad-vurgu',v[0]);}catch(e){}}
+$('#renkIzgara').innerHTML=SET.map(([k,n,h])=>`<button data-k="${k}" aria-pressed="false"><i style="background:${h}"></i>${n}</button>`).join('');
+$('#renkIzgara').onclick=e=>{const b=e.target.closest('button');if(b)vurgu(b.dataset.k);};
+$('#vurguBtn').onclick=()=>{if(isaretMod())return;const p=$('#renkler');p.hidden=!p.hidden;$('#vurguBtn').setAttribute('aria-expanded',!p.hidden);};
+document.addEventListener('click',e=>{if(!e.target.closest('#renkler,#vurguBtn'))$('#renkler').hidden=true;});
+let v0='fosfor_sarisi';try{v0=localStorage.getItem('pocad-vurgu')||v0;}catch(e){}vurgu(v0);
+
+/* ── sekmeler, boy ── */
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{if(isaretMod())return;
+  document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x===b));
+  ['sohbet','dogrulama','cikti'].forEach(k=>$('#g-'+k).hidden=k!==b.dataset.tab);});
+let bi=0;const boylar=['46%','28%','72%'];
+$('#boyBtn').onclick=()=>{bi=(bi+1)%3;document.documentElement.style.setProperty('--vh',boylar[bi]);};
+
+/* ── sohbet ── */
+const log=$('#log');let seen=-1,sonMsj=[];
+const AV='<div class="av"><svg><use href="#kumpas"/></svg></div>';
+function fmt(ts){return new Date(ts*1000).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
+function gun(ts){const d=new Date(ts*1000),b=new Date();return d.toDateString()===b.toDateString()?'bugün':d.toLocaleDateString('tr-TR',{day:'numeric',month:'long'});}
+function biçim(t){return esc(t).replace(/`([^`\n]+)`/g,'<code>$1</code>');}
+function cizSohbet(ms){
+  let h='',g='';const sonC=ms.map(m=>m.role).lastIndexOf('claude');
+  ms.forEach((m,i)=>{const gg=gun(m.ts);if(gg!==g){g=gg;h+=`<div class="gun">${gg}</div>`;}
+    h+=m.role==='claude'
+      ?`<div class="m claude" data-ui="claude-mesaji">${AV}<div class="b">${biçim(m.text)}<span class="t">Claude · ${fmt(m.ts)}${i===sonC&&i===ms.length-1?'<span class="yeni">YENİ</span>':''}</span></div></div>`
+      :`<div class="m ben" data-ui="kullanici-mesaji"><div class="b">${biçim(m.text)}<span class="t">${fmt(m.ts)}</span></div></div>`;});
+  const last=ms[ms.length-1];
+  if(last&&last.role==='user')h+='<div class="bekle" data-ui="claude-okuyor"><div class="lcd"><i></i><i></i></div>Claude okuyor…</div>';
+  if(!ms.length)h='<div class="bos-durum"><b>Sohbet boş</b>Tasarımı anlat: ölçüler, malzeme, kısıtlar. Claude bu projenin oturumunda okuyup cevaplar; model yukarıda canlı güncellenir.</div>';
+  log.innerHTML=h;const gv=$('#g-sohbet');gv.scrollTop=gv.scrollHeight;
+}
+function durum(s,t){$('#durum').dataset.s=s;$('#durumYazi').textContent=t;}
+let bekliyor=false;
+async function poll(){
+  try{const r=await fetch('/_chat/messages',{cache:'no-store'});const ms=await r.json();
+    bekliyor=!!(ms.length&&ms[ms.length-1].role==='user');
+    durum(bekliyor?'calisiyor':'bagli',bekliyor?'claude çalışıyor':'bağlı');
+    const imza=ms.length+':'+(ms.length?ms[ms.length-1].ts:0);
+    if(imza!==seen){seen=imza;cizSohbet(ms);}
+  }catch(e){durum('yok','bağlantı yok');}
+}
+async function gonder(text){text=text.trim();if(!text)return;
+  try{await fetch('/_chat/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});}catch(e){tost('Gönderilemedi: istasyon sunucusu kapalı olabilir');}
+  poll();}
+$('#f').onsubmit=e=>{e.preventDefault();const t=$('#q').value;$('#q').value='';$('#q').style.height='auto';gonder(t);};
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Android|iPhone/.test(navigator.userAgent)){e.preventDefault();$('#f').requestSubmit();}});
+$('#q').addEventListener('input',e=>{e.target.style.height='auto';e.target.style.height=Math.min(120,e.target.scrollHeight)+'px';});
+document.querySelectorAll('.hizli button').forEach(b=>b.onclick=()=>{if(!isaretMod())gonder(b.dataset.q);});
+$('#teslimBtn').onclick=()=>{if(isaretMod())return;const v=bilgi&&bilgi.version;gonder('Teslim et'+(v?` (v${v.version} · ${v.label})`:''));
+  document.querySelector('[data-tab="sohbet"]').click();};
+setInterval(poll,2000);poll();
+
+/* ── proje bilgisi: sürüm, ölçü, doğrulama, çıktılar ── */
+let bilgi=null,bilgiImza='';
+const n1=x=>(Math.round(x*10)/10).toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const kb=b=>b<1024?b+' B':b<1048576?Math.round(b/1024)+' KB':(b/1048576).toFixed(1)+' MB';
+function cizBilgi(d){
+  const v=d.version,m=d.metrics;
+  $('#surum').innerHTML=v?`<b>v${v.version}</b> · ${esc(v.label||'')}`:'model yok';
+  $('#olcu').innerHTML=m&&m.dims?`<b>${n1(m.dims.x)}</b> × <b>${n1(m.dims.y)}</b> × <b>${n1(m.dims.z)}</b> mm · <b>${n1(m.volume/1000)}</b> cm³`:'';
+  const ver=d.verify||[],pass=ver.filter(x=>x.s==='PASS').length,fail=ver.filter(x=>x.s==='FAIL').length;
+  const dm=$('#damga');
+  if(!ver.length){dm.className='damga2 yok';dm.textContent=m&&m.valid?'✓ geçerli B-rep':'rapor yok';if(m&&m.valid)dm.className='damga2 ok';}
+  else if(fail){dm.className='damga2 fail';dm.textContent=`✗ ${fail} FAIL · ${pass}/${ver.length}`;}
+  else{dm.className='damga2 ok';dm.textContent=`✓ Doğrulandı · ${pass}/${ver.length}`;}
+  $('#rozDog').textContent=ver.length?(fail?fail+' FAIL':pass+'/'+ver.length):'–';
+  $('#dogBas').textContent='Doğrulama'+(v?` · v${v.version} ${v.label||''}`:'');
+  $('#dogAlt').textContent=d.verify_mtime?'verify_report.txt · '+new Date(d.verify_mtime*1000).toLocaleString('tr-TR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'verify_report.txt';
+  $('#dogBos').hidden=ver.length>0;$('#kontrol').hidden=!ver.length;
+  $('#kontrol').innerHTML=ver.map(x=>`<li><span class="s ${x.s.toLowerCase()}">${x.s==='PASS'?'✓ PASS':x.s==='FAIL'?'✗ FAIL':'! UYARI'}</span><span class="n">${esc(x.n)}</span><span class="v">${esc(x.v)}</span></li>`).join('');
+  $('#ozet').innerHTML=m?`<div><small>Hacim</small><b>${n1(m.volume/1000)}</b> <span class="birim">cm³</span></div><div><small>Yüz</small><b>${m.faces??'–'}</b></div><div><small>B-rep</small><b>${m.valid?'✓':'✗'}</b> <span class="birim">${m.valid?'geçerli':'geçersiz'}</span></div>`:'';
+  const fs=d.files||[];$('#rozCik').textContent=fs.length||'–';$('#cikBos').hidden=fs.length>0;
+  $('#dosyalar').innerHTML=fs.map(f=>`<a class="dosya" href="/_pocad/file?n=${encodeURIComponent(f.n)}" download><div class="uz">${f.ext}</div><div><b>${esc(d.name)}.${f.ext.toLowerCase()}</b><small>${f.what}</small></div><span>${kb(f.size)}</span></a>`).join('');
+  $('#teslimBtn').disabled=!v;$('#teslimBtn').style.opacity=v?1:.45;
+  const at=d.attempt;let w=$('#uyari');
+  if(at&&at.status!=='success'){if(!w){w=document.createElement('div');w.id='uyari';w.className='uyari-serit';$('#kare').appendChild(w);}
+    w.innerHTML=`<b>✗ Son koşu başarısız</b> (v${at.version} · ${esc(at.label||'')}). Son iyi model gösteriliyor.`;}
+  else if(w)w.remove();
+}
+async function bilgiAl(){try{const r=await fetch('/_pocad/info',{cache:'no-store'});const d=await r.json();
+  const im=JSON.stringify(d);if(im!==bilgiImza){bilgiImza=im;bilgi=d;cizBilgi(d);if(d.vbase&&!vbase){vbase=d.vbase;gorPoll();}}}catch(e){}}
+setInterval(bilgiAl,3000);bilgiAl();
+
+/* ── canlı görüntüleyici: agentcad sürüm görüntüleyicisi, kamera durumu sürümler arası korunur ── */
+let vbase=__VBASE__;const kare=$('#kare'),client=(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2));
+let current=null,pending=null;
+function yer(){if(!current&&!pending&&!kare.querySelector('iframe.ph')){const f=document.createElement('iframe');f.className='ph';f.src='/_chat/placeholder';kare.appendChild(f);}}
+function yerSil(){kare.querySelectorAll('iframe.ph').forEach(f=>f.remove());}
+function sendTo(fr,type,extra={}){fr.el.contentWindow.postMessage({type,...extra},location.origin);}
+function iptal(){if(!pending)return;clearTimeout(pending.timer);pending.el.remove();pending=null;}
+function yukle(latest){const el=document.createElement('iframe');el.className='pending';el.title='Sürüm '+latest.version;el.allow='fullscreen';
+  const it={...latest,el};pending=it;it.timer=setTimeout(iptal,45000);
+  const a=latest.artifact||'';el.src=(a.startsWith('/')?a:vbase+a)+'?live=1';kare.appendChild(el);}
+addEventListener('message',ev=>{if(ev.origin!==location.origin||!pending)return;const d=ev.data||{};
+  const fromP=ev.source===pending.el.contentWindow,fromC=current&&ev.source===current.el.contentWindow;
+  if(fromP&&d.type==='agentcad:ready'){pending.ready=true;clearTimeout(pending.timer);if(current)sendTo(current,'agentcad:capture');else sendTo(pending,'agentcad:restore',{state:null});}
+  else if(fromC&&d.type==='agentcad:state'){if(!d.busy)sendTo(pending,'agentcad:restore',{state:d.state});}
+  else if(fromP&&d.type==='agentcad:restored'){const old=current;current=pending;pending=null;clearTimeout(current.timer);current.el.classList.remove('pending');if(old)old.el.remove();yerSil();}
+  else if(fromP&&d.type==='agentcad:load-error'){iptal();}
+});
+async function gorPoll(){
+  if(!vbase){yer();return;}
+  try{const r=await fetch(vbase+'state?client='+client,{cache:'no-store'});if(!r.ok)throw 0;const st=await r.json();const latest=st.latest;
+    if(pending&&latest&&pending.version!==latest.version)iptal();
+    if(latest&&latest.version!==(current&&current.version)&&!pending)yukle(latest);
+    else if(pending&&pending.ready&&current)sendTo(current,'agentcad:capture');
+    if(!latest)yer();
+  }catch(e){yer();}
+  setTimeout(gorPoll,document.hidden?10000:1500);
+}
+gorPoll();
+addEventListener('pagehide',()=>{if(vbase)navigator.sendBeacon(vbase+'leave',JSON.stringify({client}));});
+
+/* ── İşaretle: agentation usulü arayüz notu → sohbete Claude'a ── */
+let secili=null;
+function yolu(el){const p=[];while(el&&el.nodeType===1&&el!==document.body&&p.length<5){let s=el.tagName.toLowerCase();if(el.id)s+='#'+el.id;else if(el.classList.length)s+='.'+[...el.classList].filter(c=>c!=='vurgu').slice(0,2).join('.');p.unshift(s);if(el.id)break;el=el.parentElement;}return p.join(' > ');}
+function mod(on){document.body.classList.toggle('isaretle',on);$('#isaretBtn').setAttribute('aria-pressed',on);$('#ipucu').hidden=!on;if(!on)document.querySelectorAll('.vurgu').forEach(e=>e.classList.remove('vurgu'));}
+$('#isaretBtn').onclick=()=>{$('#notSayfa').hidden=true;mod(!isaretMod());};
+document.addEventListener('click',e=>{
+  if(!isaretMod()||e.target.closest('#isaretBtn,.sayfa'))return;
+  const el=e.target.closest('[data-ui]');if(!el)return;e.preventDefault();e.stopPropagation();
+  document.querySelectorAll('.vurgu').forEach(x=>x.classList.remove('vurgu'));el.classList.add('vurgu');
+  const h=e.target;secili={ui:el.dataset.ui,secici:yolu(h),metin:(h.textContent||'').trim().replace(/\s+/g,' ').slice(0,60),w:innerWidth};
+  $('#notHedef').textContent=secili.ui+(secili.metin?' · “'+secili.metin.slice(0,40)+'”':'');$('#notSecici').textContent=secili.secici;
+  $('#notMetin').value='';$('#notSayfa').hidden=false;$('#ipucu').hidden=true;setTimeout(()=>$('#notMetin').focus(),50);
+},true);
+$('#notIptal').onclick=()=>{$('#notSayfa').hidden=true;mod(false);};
+$('#notKaydet').onclick=()=>{const t=$('#notMetin').value.trim();if(!t||!secili){$('#notMetin').focus();return;}
+  $('#notSayfa').hidden=true;mod(false);
+  gonder(`[Arayüz notu] ${secili.ui} · \`${secili.secici}\` (${secili.w}px)${secili.metin?' · “'+secili.metin+'”':''}\n${t}`);
+  document.querySelector('[data-tab="sohbet"]').click();tost('Not Claude\'a gönderildi');};
+</script>
+</body></html>

@@ -24,7 +24,9 @@
 | `scripts/setup-ubuntu.sh` | Ubuntu tarafı: micromamba, Python 3.12, conda-forge OCP 7.8, build123d/agentcad (`--no-deps`), shim'ler |
 | `bin/agentcad` | Termux → Ubuntu sarmalayıcı. `$HOME` aynı yolla bağlanır (`--termux-home`); gerekirse Xvfb başlatır |
 | `bin/cad-viewer` | agentcad görüntüleyici servisini ön planda tutar (proje başına `build/.agentcad/viewer`) |
-| `bin/cad-chat.py` | İstasyon sayfası, sohbet API'si ve görüntüleyici için ters vekil |
+| `bin/cad-chat.py` | İstasyon sunucusu: sohbet API'si, `/_pocad/info` (son sürümün ölçüleri, `verify_report.txt`, çıktılar), `/_pocad/file` (çıktı indirme), görüntüleyici için ters vekil + koyu tema enjeksiyonu |
+| `bin/pocad-page.html` | İstasyon sayfası (Türkişi kimliği, palet v5). Her istekte diskten okunur; sunucuyu yeniden başlatmadan düzenlenebilir |
+| `assets/pocad-logo.svg` | PoCAD logosu (vektörel, fonttan bağımsız) |
 | `bin/cad-reply` | Claude'un sayfaya cevap yazması |
 | `bin/pocad` | Proje yaşam döngüsü: new / start / stop / status / deliver / doctor |
 | `templates/CLAUDE.md` | Her projeye kopyalanır: sohbet döngüsü, çalıştırma kuralları, tuzaklar, teslim |
@@ -50,3 +52,12 @@
 - **Batarya:** Sürekli şarjda kalacak telefonlarda şarjı %80'de sınırla, ekran parlaklığını düşür.
 - **Ekranın açık kalması:** "Şarj olurken uyanık kal" ayarı ve `termux-wake-lock`
   (`pocad start` bunu çağırır).
+
+## İstasyon sayfası
+- Sayfa agentcad'in canlı kabuğunu değil, sürüm görüntüleyicisini (`artifacts/N/viewer.html`) doğrudan
+  iframe'de açar. `state` uç noktasını kendisi yoklar; yeni sürümde kamera durumunu
+  `agentcad:capture` / `agentcad:restore` mesajlarıyla korur.
+- Görüntüleyici HTML'ine vekil üzerinden palet v5 koyu teması eklenir: lacivert çelik zemin, Parlak Gümüş
+  parça, tek satır mod çubuğu (veri olmayan modlar gizli), katlanır Part controls.
+- Renk kuralları: kırmızı (#AF1537) yalnız kimlik; yapı Çelik Mavisi; sahnede tek Parlak Set vurgusu
+  (üstüne Derin yazılır); durum Geçti / Hata, her zaman işaret ve yazıyla.

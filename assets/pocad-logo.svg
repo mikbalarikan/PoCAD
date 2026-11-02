@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" role="img" aria-label="PoCAD">
+  <!-- PoCAD logo · palet v5: Çelik Mavisi telefon gövdesi, Krom kenar, Gümüş/Krom harfler, Fosfor Sarısı yeni yüz -->
+  <title>PoCAD</title>
+  <!-- işaret: telefon + izometrik küp -->
+  <rect x="3" y="2" width="28" height="44" rx="6" fill="#39659B" stroke="#ECF1F5" stroke-width="2.5"/>
+  <rect x="13" y="5.5" width="8" height="2" rx="1" fill="#0D161F"/>
+  <g stroke="#0D161F" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M17 14 L26 19 L17 24 L8 19 Z" fill="#E6FF1F"/>
+    <path d="M8 19 L17 24 L17 35 L8 30 Z" fill="#EEF3FA"/>
+    <path d="M26 19 L17 24 L17 35 L26 30 Z" fill="#B7C3CD"/>
+  </g>
+  <!-- yazı: geometrik çizgi harfler (fonttan bağımsız) -->
+  <g fill="none" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M45 43 V6 H56 a9.5 9.5 0 0 1 0 19 H45" stroke="#B7C3CD"/>
+    <rect x="76" y="19" width="15" height="24" rx="7.5" stroke="#B7C3CD"/>
+    <path d="M124 12 A13 18.5 0 1 0 124 37" stroke="#ECF1F5"/>
+    <path d="M131 43 L140.5 6 L150 43 M134.5 31 H146.5" stroke="#ECF1F5"/>
+    <path d="M159 6 V43 H162 a11 18.5 0 0 0 0 -37 Z" stroke="#ECF1F5"/>
+  </g>
+</svg>
