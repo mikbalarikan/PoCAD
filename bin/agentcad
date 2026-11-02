@@ -1,0 +1,18 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# PoCAD: Termux -> Ubuntu (proot-distro) agentcad sarmalayıcısı.
+# Termux $HOME, Ubuntu içinde aynı yolla erişilir (--termux-home). PNG önizlemeleri
+# için gerekirse sanal ekran (Xvfb :99) otomatik başlatılır.
+# Proje dizini $HOME altında olmalıdır.
+case "$PWD" in
+  "$HOME"|"$HOME"/*) ;;
+  *) echo "agentcad (PoCAD): proje dizini \$HOME altında olmalı ($HOME)" >&2; exit 2 ;;
+esac
+rel="${PWD#$HOME}"
+exec proot-distro login ubuntu --termux-home --shared-tmp -- bash -c '
+cd "/root'"$rel"'" || exit 1
+export MPLBACKEND=Agg
+if [ -z "$DISPLAY" ]; then
+  if ! pgrep -x Xvfb >/dev/null 2>&1; then (Xvfb :99 -screen 0 1600x1200x24 >/dev/null 2>&1 &); sleep 1; fi
+  export DISPLAY=:99
+fi
+exec /opt/mamba/envs/cad/bin/agentcad "$@"' agentcad "$@"

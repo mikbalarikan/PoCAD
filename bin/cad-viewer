@@ -1,0 +1,8 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# cad-viewer PROJE_DIZINI — agentcad canlı görüntüleyici servisini ön planda çalıştırır.
+# (`agentcad viewer open` servisi proot oturumu kapanınca ölür; bu betik onu ayakta tutar.)
+P=$(realpath "${1:-$PWD}")
+BD=$(sed -n 's/^[[:space:]]*build_dir[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$P/agentcad.toml" 2>/dev/null | head -1)
+B=$(realpath -m "$P/${BD:-.}")
+exec proot-distro login ubuntu --termux-home --shared-tmp -- bash -c \
+  "cd '$P' && AGENTCAD_VIEWER_HOME='$B/.agentcad/viewer' exec /opt/mamba/envs/cad/bin/python -m agentcad.viewer_service"

@@ -1,0 +1,11 @@
+[FAIL] 1 Hacim: 41.8 cm³ (sınır 40); dolu PLA 51.8 g, baskı ≈ 36.5 g
+[PASS] 2 Telefon kutusu (portre): kesişim 0.0000 mm³, sırtlık mesafesi 0.000 mm, raf mesafesi 0.000 mm
+[PASS] 2 Telefon kutusu (landscape): kesişim 0.0000 mm³, sırtlık mesafesi 0.000 mm, raf mesafesi 0.000 mm
+[PASS] 3 Kamera temizliği: sırtlık temas bölgesi |X| ≤ 31.3 mm (sınır 35.0)
+[PASS] 4 Fiş keep-out: kesişim 0.0000 mm³
+[PASS] 5 Overhang: 0 ihlal; köprüler: Z=27.90 genişlik 64.0, Z=85.56 genişlik 53.0, Z=7.00 genişlik 14.0
+[PASS] 6 Devrilme (portre): F_tip = 1.01 N (baskı kütlesi 37 g ile; dolu PLA ile 1.08 N), sınır 0.9 N
+[PASS] 7 Ayak izi (portre): toplam CG Y = 47.8 mm (0 < Y < 115.0)
+[PASS] 7 Ayak izi (landscape): toplam CG Y = 35.3 mm (0 < Y < 115.0)
+Kenar işlemleri: çerçeve sırtlık kenarları: 2×chamfer 0.8 | çerçeve taban pahı: 1×chamfer 0.6 | çerçeve sırtlık kenarları: 2×chamfer 0.8 | çerçeve taban pahı: 1×chamfer 0.6 | dudak ön-üst pah: 1×chamfer 0.8 | raf/dudak uç kenarları: 2×chamfer 0.8 | raf bloğu taban pahı: 3×chamfer 0.6 | üst çubuk ön-üst R: 1×fillet 1.5 | arka çubuk taban pahı: 3×chamfer 0.6 | kablo çentiği kenarları: 9×chamfer 0.8
+SONUÇ: FAIL VAR

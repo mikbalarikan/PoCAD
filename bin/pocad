@@ -1,0 +1,133 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# pocad — PoCAD proje yöneticisi (Termux)
+#
+#   pocad new NAME            yeni proje: ~/cad/NAME (agentcad init + CLAUDE.md) ve istasyonu başlat
+#   pocad start NAME [PORT]   görüntüleyici + sohbet sayfasını arka planda başlat, tarayıcıda aç
+#   pocad stop NAME           servisleri durdur
+#   pocad status [NAME]       çalışan servisler ve adresler
+#   pocad url NAME            sohbet sayfası adresi
+#   pocad deliver NAME VDIR   doğrulanmış sürümü /sdcard/PoCAD/NAME/ altına teslim et
+#   pocad list                projeler
+#   pocad doctor              kurulum kontrolü
+set -euo pipefail
+
+POCAD_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PROJECTS="${POCAD_PROJECTS:-$HOME/cad}"
+DELIVER="${POCAD_DELIVER:-/sdcard/PoCAD}"
+BIN="$POCAD_ROOT/bin"
+
+# proot-distro sürümüne göre konum değişir (installed-rootfs/ veya containers/)
+ubuntu_installed() {
+  [ -d "$PREFIX/var/lib/proot-distro/containers/ubuntu" ] || [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/ubuntu" ]
+}
+die() { echo "pocad: $*" >&2; exit 1; }
+pdir() { [ -n "${1:-}" ] || die "proje adı gerekli"; echo "$PROJECTS/$1"; }
+alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
+
+free_port() {
+  local p=8765
+  while (exec 3<>/dev/tcp/127.0.0.1/$p) 2>/dev/null || grep -qx "$p" "$PROJECTS"/*/.pocad/port 2>/dev/null; do
+    p=$((p+1))
+  done
+  echo $p
+}
+
+cmd_new() {
+  local name="$1" d; d=$(pdir "$name")
+  [ -e "$d/agentcad.toml" ] && die "proje zaten var: $d"
+  mkdir -p "$d/.pocad"
+  printf 'build_dir = "./build"\n' > "$d/agentcad.toml"
+  (cd "$d" && "$BIN/agentcad" init --name "$name" >/dev/null 2>"$d/.pocad/init.log") || die "agentcad init başarısız (bkz. $d/.pocad/init.log)"
+  sed "s/{{NAME}}/$name/g; s#{{DELIVER}}#$DELIVER#g" "$POCAD_ROOT/templates/CLAUDE.md" > "$d/CLAUDE.md"
+  printf 'build/\n.chat/\n.pocad/\n__pycache__/\n' > "$d/.gitignore"
+  echo "proje oluşturuldu: $d"
+  cmd_start "$name"
+}
+
+cmd_start() {
+  local name="$1" d port; d=$(pdir "$name")
+  [ -e "$d/agentcad.toml" ] || die "proje yok: $d (önce: pocad new $name)"
+  mkdir -p "$d/.pocad"
+  port="${2:-$(cat "$d/.pocad/port" 2>/dev/null || free_port)}"
+  echo "$port" > "$d/.pocad/port"
+  if ! alive "$d/.pocad/viewer.pid"; then
+    nohup "$BIN/cad-viewer" "$d" > "$d/.pocad/viewer.log" 2>&1 &
+    echo $! > "$d/.pocad/viewer.pid"
+  fi
+  if ! alive "$d/.pocad/chat.pid"; then
+    nohup python3 "$BIN/cad-chat.py" "$d" "$port" > "$d/.pocad/chat.log" 2>&1 &
+    echo $! > "$d/.pocad/chat.pid"
+  fi
+  command -v termux-wake-lock >/dev/null && termux-wake-lock || true
+  for _ in $(seq 1 40); do (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null && break; sleep 0.25; done
+  echo "istasyon: http://127.0.0.1:$port/   (proje: $d)"
+  [ "${POCAD_NO_BROWSER:-0}" = 1 ] || termux-open-url "http://127.0.0.1:$port/" 2>/dev/null || true
+}
+
+cmd_stop() {
+  local d; d=$(pdir "$1")
+  for s in chat viewer; do
+    if alive "$d/.pocad/$s.pid"; then
+      pkill -P "$(cat "$d/.pocad/$s.pid")" 2>/dev/null || true
+      kill "$(cat "$d/.pocad/$s.pid")" 2>/dev/null || true
+      echo "$s durduruldu"
+    fi
+    rm -f "$d/.pocad/$s.pid"
+  done
+}
+
+cmd_status() {
+  local names
+  if [ -n "${1:-}" ]; then names="$1"; else names=$(ls "$PROJECTS" 2>/dev/null || true); fi
+  for n in $names; do
+    local d="$PROJECTS/$n"; [ -e "$d/agentcad.toml" ] || continue
+    local v="—" c="—"
+    alive "$d/.pocad/viewer.pid" && v="çalışıyor"
+    alive "$d/.pocad/chat.pid" && c="çalışıyor  http://127.0.0.1:$(cat "$d/.pocad/port")/"
+    printf '%-20s görüntüleyici: %-10s  sohbet: %s\n' "$n" "$v" "$c"
+  done
+}
+
+cmd_url() { local d; d=$(pdir "$1"); echo "http://127.0.0.1:$(cat "$d/.pocad/port" 2>/dev/null || die "başlatılmamış")/"; }
+
+cmd_list() { ls -1 "$PROJECTS" 2>/dev/null || true; }
+
+cmd_deliver() {
+  local name="$1" vdir="${2:-}" d out
+  d=$(pdir "$name")
+  [ -n "$vdir" ] || die "kullanım: pocad deliver NAME SÜRÜM_DİZİNİ (agentcad run JSON çıktısındaki outputs.step dosyasının klasörü, ör. build/v3_final)"
+  case "$vdir" in /*) ;; *) vdir="$d/$vdir" ;; esac
+  [ -f "$vdir/output.step" ] || die "doğrulanmış STEP yok: $vdir/output.step"
+  out="$DELIVER/$name"; mkdir -p "$out/cikti" "$out/src"
+  local base="${POCAD_PART_NAME:-$name}"
+  cp "$vdir/output.step" "$out/cikti/$base.step"
+  [ -f "$vdir/output.glb" ] && cp "$vdir/output.glb" "$out/cikti/$base.glb"
+  [ -f "$vdir/preview.png" ] && cp "$vdir/preview.png" "$out/cikti/onizleme.png"
+  echo "STL dışa aktarılıyor (tolerance ${POCAD_STL_TOL:-0.01}, angular ${POCAD_STL_ANG:-0.1})…"
+  proot-distro login ubuntu --termux-home -- /opt/mamba/envs/cad/bin/python "$POCAD_ROOT/scripts/stl_export.py" \
+      "$vdir/output.step" "$d/.pocad/$base.stl" "${POCAD_STL_TOL:-0.01}" "${POCAD_STL_ANG:-0.1}"
+  cp "$d/.pocad/$base.stl" "$out/cikti/$base.stl"
+  for f in "$d"/*.py "$d"/*.md "$d"/agentcad.toml "$d"/verify_report.txt "$d"/spec.json; do
+    [ -f "$f" ] || continue
+    case "$(basename "$f")" in CLAUDE.md|AGENTS.md) continue ;; esac
+    if [ "$(basename "$f")" = README.md ]; then cp "$f" "$out/README.md"; else cp "$f" "$out/src/"; fi
+  done
+  echo "teslim edildi: $out"; ls -R "$out"
+}
+
+cmd_doctor() {
+  local ok=1
+  command -v proot-distro >/dev/null && echo "✓ proot-distro" || { echo "✗ proot-distro yok"; ok=0; }
+  ubuntu_installed && echo "✓ Ubuntu kurulu" || { echo "✗ Ubuntu yok"; ok=0; }
+  if proot-distro login ubuntu -- /opt/mamba/envs/cad/bin/python -c "import build123d, agentcad, OCP; print('✓ build123d', build123d.__version__, '+ agentcad + OCP')" 2>/dev/null; then :; else echo "✗ CAD ortamı (/opt/mamba/envs/cad) çalışmıyor"; ok=0; fi
+  [ -d "$DELIVER" ] || [ -w /sdcard ] && echo "✓ depolama erişimi" || echo "! /sdcard yazılamıyor (termux-setup-storage)"
+  command -v termux-open-url >/dev/null && echo "✓ termux-open-url" || echo "! termux-tools eksik"
+  [ $ok = 1 ] && echo "PoCAD hazır." || { echo "Sorun var: ./install.sh tekrar çalıştırın."; exit 1; }
+}
+
+sub="${1:-}"; shift || true
+case "$sub" in
+  new) cmd_new "$@" ;; start) cmd_start "$@" ;; stop) cmd_stop "$@" ;; status) cmd_status "$@" ;;
+  url) cmd_url "$@" ;; list) cmd_list ;; deliver) cmd_deliver "$@" ;; doctor) cmd_doctor ;;
+  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
