@@ -24,3 +24,4 @@ known-first-party = ["conftest"]
 [tool.ruff.lint.per-file-ignores]
 "bin/cad-chat.py" = ["E501"]  # gömülü CSS/HTML dizeleri
 "bin/cad-reply" = ["I001"]
+"tests/test_core.py" = ["E402"]  # CAD yoksa modül, içe aktarmalardan önce atlanır
