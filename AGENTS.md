@@ -14,7 +14,7 @@ mevcut stile uyar.
 | `bin/` | `pocad`, `agentcad` sarmalayıcısı, `cad-chat.py` istasyon sunucusu, `cad-reply`, istasyon sayfası |
 | `scripts/stl_export.py` | STEP → STL + su geçirmezlik kontrolü |
 | `templates/CLAUDE.md` | Her kullanıcı projesine kopyalanan agent kuralları |
-| `pocad/` | Yeni çekirdek paketi (build123d 0.13 / OCP 8); `pocad/_ocp.py` OCP sürüm farkları |
+| `pocad/` | Yeni çekirdek paketi (build123d 0.13 / OCP 8): `core`, `measure`, `result` (oguz-atolye'den), `project`, `build`, `api`, `cli`, `mcp_server`; `_ocp.py` OCP sürüm farkları |
 | `tests/` | pytest testleri |
 | `docs/` | Mimari, sorun giderme, yeni telefon kurulumu |
 | `docs/tasarim/` | Onaylı tasarım belgeleri ve uygulama planları (Superpowers) |
@@ -52,6 +52,25 @@ shellcheck -S warning install.sh bin/pocad bin/agentcad bin/cad-viewer scripts/*
 ```
 CI (`.github/workflows/ci.yml`) bunların hepsini her PR'da çalıştırır. Kırmızı CI ile merge yok;
 test atlatmak, silmek ya da `skip` eklemek yasak.
+
+## `pocad-mcp`'yi bir agent'a bağlamak
+Sunucu stdio üzerinde çalışır: `python -m pocad mcp`. Araçlar ve CLI komutları aynı
+`pocad.api` işlevlerini çağırır (`python -m pocad --help`). PoCAD checkout'u `PYTHONPATH`'te
+olmalı ve Python ortamında `requirements-cad.txt` kurulu olmalı.
+
+- **Claude Code** (proje dizininde `.mcp.json`):
+  ```json
+  {"mcpServers": {"pocad": {"command": "python3", "args": ["-m", "pocad", "mcp"],
+                            "env": {"PYTHONPATH": "/yol/PoCAD", "POCAD_PROJECT": "."}}}}
+  ```
+- **Codex CLI** (`~/.codex/config.toml`):
+  ```toml
+  [mcp_servers.pocad]
+  command = "python3"
+  args = ["-m", "pocad", "mcp"]
+  env = { PYTHONPATH = "/yol/PoCAD" }
+  ```
+Telefonda Python proot içindeki Ubuntu'da çalışır; oradaki sarmalayıcı Plan 09'da gelir.
 
 ## Test yazma kuralları
 - `bin/` betikleri Termux shebang'i taşır ve modül düzeyinde çalışır. Testler onları
