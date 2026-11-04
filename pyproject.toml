@@ -2,6 +2,7 @@
 # yalnızca testler (pytest) ve lint (ruff) içindir.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # pocad checkout'tan içe aktarılır, kurulmaz
 addopts = "-ra --strict-markers"
 markers = [
   "cad: build123d/OpenCascade gerektiren testler (pip install -r requirements-cad.txt)",

@@ -14,8 +14,10 @@ mevcut stile uyar.
 | `bin/` | `pocad`, `agentcad` sarmalayıcısı, `cad-chat.py` istasyon sunucusu, `cad-reply`, istasyon sayfası |
 | `scripts/stl_export.py` | STEP → STL + su geçirmezlik kontrolü |
 | `templates/CLAUDE.md` | Her kullanıcı projesine kopyalanan agent kuralları |
+| `pocad/` | Yeni çekirdek paketi (build123d 0.13 / OCP 8); `pocad/_ocp.py` OCP sürüm farkları |
 | `tests/` | pytest testleri |
 | `docs/` | Mimari, sorun giderme, yeni telefon kurulumu |
+| `docs/tasarim/` | Onaylı tasarım belgeleri ve uygulama planları (Superpowers) |
 
 Mimarinin ayrıntısı: `docs/MIMARI.md`. Değişiklik yapmadan önce oku.
 
@@ -44,7 +46,7 @@ Küçük, tek dosyalık düzeltmelerde 1 ve 3 kısaltılabilir; test ve review k
 pip install -r requirements-dev.txt          # pytest + ruff
 ruff check .
 pytest -m "not cad"                           # hızlı testler, CAD çekirdeği gerekmez
-pip install -r requirements-cad.txt           # build123d 0.10 + OCP 7.8 (x86_64/aarch64 Linux, macOS)
+pip install -r requirements-cad.txt           # build123d 0.13 + OCP 8 (x86_64/aarch64 Linux, macOS)
 pytest -m cad                                 # CAD testleri
 shellcheck -S warning install.sh bin/pocad bin/agentcad bin/cad-viewer scripts/*.sh
 ```
@@ -60,9 +62,15 @@ test atlatmak, silmek ya da `skip` eklemek yasak.
   Bunları PR açıklamasında "cihazda denendi: …" diye yaz.
 
 ## Değişmez kurallar
-- **Sürüm sabitleri:** build123d 0.10.0, agentcad 0.7.1, OCP 7.8.1.1, `ocp_gordon<0.3`,
-  Python 3.12. Değiştirirsen `scripts/setup-ubuntu.sh`, `requirements-cad.txt` ve README'yi
-  birlikte güncelle.
+- **Sürüm sabitleri (geçiş dönemi):**
+  - Yeni çekirdek `pocad/`: build123d 0.13.0, OCP 8.0.1.1 (`cadquery-ocp-novtk`), Python 3.12
+    (`requirements-cad.txt`, CI'da x86_64 ve ARM64).
+  - Telefon kurulumu ve `bin/`: agentcad kaldırılana kadar (Plan 09) agentcad 0.7.1,
+    build123d 0.10.0, OCP 7.8.1.1, `ocp_gordon<0.3` (`scripts/setup-ubuntu.sh`).
+    `bin/` ve `scripts/` kodu iki sürümde de çalışmalı.
+  - Bir sabiti değiştirirsen ilgili dosyaları ve README'yi birlikte güncelle.
+- **OCP adları:** OCP koleksiyon tipleri, TopoDS downcast'leri ve sürümle değişen diğer adlar
+  yalnız `pocad/_ocp.py` üzerinden kullanılır.
 - **Shebang'ler:** `bin/` içindeki `#!/data/data/com.termux/...` satırlarına dokunma.
 - **Güvenlik:** `cad-chat` yalnızca `127.0.0.1`'e bağlanır; `/_pocad/file` izin listesiyle çalışır.
   Bu sınırları gevşeten değişiklik, test ve açık gerekçe ister.

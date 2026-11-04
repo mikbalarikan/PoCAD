@@ -1,5 +1,5 @@
-# Telefondaki sürümlerle aynı CAD çekirdeği (bkz. scripts/setup-ubuntu.sh).
+# pocad çekirdeği (bkz. docs/tasarim/2026-11-04-pocad-cekirdek-mcp.md K-1).
+# Telefon kurulumu agentcad kaldırılana kadar 0.10/OCP 7.8'de kalır (setup-ubuntu.sh).
 -r requirements-dev.txt
-build123d==0.10.0
-cadquery-ocp>=7.8,<7.9
-ocp_gordon<0.3
+build123d==0.13.0
+cadquery-ocp-novtk==8.0.1.1.0

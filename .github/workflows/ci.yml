@@ -39,8 +39,12 @@ jobs:
       - run: pytest -m "not cad"
 
   cad:
-    name: Testler (build123d + OCP 7.8)
-    runs-on: ubuntu-latest
+    name: Testler (build123d 0.13 + OCP 8, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -49,6 +53,6 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-cad.txt
       - run: pip install -r requirements-cad.txt
-      - name: build123d içe aktarılabiliyor mu
-        run: python -c "import build123d; print(build123d.__version__)"
+      - name: CAD çekirdeği içe aktarılabiliyor mu
+        run: python -c "from pocad import _ocp; print(_ocp.versions())"
       - run: pytest -m cad
