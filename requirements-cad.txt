@@ -3,3 +3,8 @@
 -r requirements-dev.txt
 build123d==0.13.0
 cadquery-ocp-novtk==8.0.1.1.0
+trimesh==5.2.0  # mesh ölçümleri B-rep'i yalnız doğrular (pocad.measure)
+rtree==1.4.1    # trimesh yakınlık sorguları
+pytest-xdist==3.8.0  # CAD testleri paralel (CI: pytest -m cad -n auto)
+# Embree ışın izleme: tekerleği yalnız x86-64 ve macOS için var; ARM64'te min_wall_mesh INCONCLUSIVE döner
+embreex==4.4.0.post1; sys_platform == "darwin" or platform_machine == "x86_64" or platform_machine == "AMD64"

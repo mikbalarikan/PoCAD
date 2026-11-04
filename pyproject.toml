@@ -25,3 +25,13 @@ known-first-party = ["conftest"]
 "bin/cad-chat.py" = ["E501"]  # gömülü CSS/HTML dizeleri
 "bin/cad-reply" = ["I001"]
 "tests/test_core.py" = ["E402"]  # CAD yoksa modül, içe aktarmalardan önce atlanır
+# oguz-atolye'den taşınan ölçüm kodu: kaynağa sadakat için stil uyarıları değiştirilmeden bırakıldı
+"pocad/measure/band.py" = ["B023", "B905", "E741"]
+"pocad/measure/bridge.py" = ["B007"]
+"pocad/measure/radial.py" = ["B905", "E501"]
+"pocad/measure/features.py" = ["B905"]
+"pocad/measure/keepin.py" = ["B905"]
+"pocad/measure/sampling.py" = ["B905"]
+"pocad/measure/wall.py" = ["B905"]
+"tests/test_measure.py" = ["E402", "E501"]
+"tests/test_mutations.py" = ["B905", "E402", "E501", "E731"]

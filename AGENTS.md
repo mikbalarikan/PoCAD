@@ -47,7 +47,7 @@ pip install -r requirements-dev.txt          # pytest + ruff
 ruff check .
 pytest -m "not cad"                           # hızlı testler, CAD çekirdeği gerekmez
 pip install -r requirements-cad.txt           # build123d 0.13 + OCP 8 (x86_64/aarch64 Linux, macOS)
-pytest -m cad                                 # CAD testleri
+pytest -m cad -n auto                         # CAD testleri (paralel)
 shellcheck -S warning install.sh bin/pocad bin/agentcad bin/cad-viewer scripts/*.sh
 ```
 CI (`.github/workflows/ci.yml`) bunların hepsini her PR'da çalıştırır. Kırmızı CI ile merge yok;

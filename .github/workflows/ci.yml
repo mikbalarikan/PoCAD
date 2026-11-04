@@ -57,4 +57,4 @@ jobs:
       - run: pip install -r requirements-cad.txt
       - name: CAD çekirdeği içe aktarılabiliyor mu
         run: python -c "from pocad import _ocp; print(_ocp.versions())"
-      - run: pytest -m cad
+      - run: pytest -m cad -n auto
