@@ -1,6 +1,6 @@
 # Tasarım: PoCAD çekirdeği ve MCP sunucusu (Aşama 1)
 
-Tarih: 2026-11-04 · Durum: **TASLAK, onay bekliyor** · Superpowers adımı: brainstorming → tasarım belgesi
+Tarih: 2026-11-04 · Durum: **ONAYLANDI 2026-11-04** · Superpowers adımı: brainstorming → tasarım belgesi
 
 ## 1. Amaç
 
@@ -96,7 +96,8 @@ skills/
   pocad-design/SKILL.md   ← designer-doctrine (sadeleştirilmiş)
   pocad-review/SKILL.md   ← reviewer-doctrine (sadeleştirilmiş)
 templates/              proje şablonu: AGENTS.md, CLAUDE.md (@AGENTS.md), SPEC.md
-bin/                    pocad (bash, ince), cad-reply, agentcad sarmalayıcısı → kaldırılır
+bin/                    cad-reply (geçiş süresince); agentcad sarmalayıcısı ve bash `pocad` → kaldırılır
+pocad/cli.py            `pocad` komutu (Python), MCP araçlarının komut satırı karşılığı (S-3)
 ```
 
 ## 4. Proje dizini (agentcad'in yerine)
@@ -201,14 +202,13 @@ DELIVER  export + teslim klasörü                                   → KULLANI
 5. **MCP sözleşme testleri:** her araç için örnek çağrı → JSON şeması doğrulaması, hatalı girdi → anlamlı hata.
 6. **Uçtan uca test:** kutu-braket örneği `project_init → build → gates → review_record → deliver`.
 
-## 11. Açık sorular (kullanıcı kararı)
+## 11. Kullanıcı kararları (2026-11-04)
 
-- **S-1 Denetim döngüsü:** oguz-atolye "tek denetim, sonra kullanıcı karar verir" diyor, STL-to-CAD "en fazla 3 otomatik döngü".
-  Öneri: tasarım hattında tek denetim; RE hattında Aşama 1b'de karar.
-- **S-2 Gate kapsamı:** Aşama 1 yalnız FDM (§U + §D) mi, yoksa SLA ve CNC satırları da mı?
-  Öneri: yalnız FDM, çünkü hedef kitle 3D yazıcı kullanıcıları.
-- **S-3 `bin/pocad` bash'te mi kalsın, Python CLI'ya mı dönsün?**
-  Öneri: Python CLI (`pocad` = MCP araçlarının komut satırı karşılığı). Masaüstüne taşınabilir ve test edilebilir olur.
+- **S-1 Denetim döngüsü: ONAY.** Tasarım hattında tek denetim, sonra kullanıcı karar verir; otomatik döngü yok.
+  RE hattındaki "en fazla 3 döngü" kuralı Aşama 1b'de ayrıca kararlaştırılır.
+- **S-2 Gate kapsamı: ONAY.** Aşama 1'de yalnız FDM (§U + §D). Plastik enjeksiyon, CNC ve diğer
+  DFM kuralları sonraki bir aşamada eklenecek; `gates.toml` buna uygun olarak süreç başına bölümlere ayrılır.
+- **S-3 CLI: ONAY.** `pocad` Python CLI'ya dönüşür; komutlar MCP araçlarının birebir karşılığıdır.
 
 ## 12. Uygulama sırası (her biri ayrı küçük PR)
 
