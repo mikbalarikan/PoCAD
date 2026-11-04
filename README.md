@@ -98,6 +98,15 @@ izleyebilirsin. Ayrıntılar ve öneriler (şarj, ekranın açık kalması, kull
 
 Sorunlar ve çözümleri: [`docs/SORUN-GIDERME.md`](docs/SORUN-GIDERME.md)
 
+## Geliştirme
+Repoyu geliştirmek için iş akışı, test komutları ve kurallar [`AGENTS.md`](AGENTS.md)'de.
+Kısaca: [Superpowers](https://github.com/obra/superpowers) yöntemi (plan → alt-agent'larla
+uygulama → review → TDD), `pytest` testleri ve her PR'da çalışan GitHub Actions CI.
+```bash
+pip install -r requirements-dev.txt && ruff check . && pytest -m "not cad"
+pip install -r requirements-cad.txt && pytest -m cad      # build123d gerektiren testler
+```
+
 ## Lisans
 PoCAD betikleri MIT lisanslıdır ([LICENSE](LICENSE)). agentcad (Apache-2.0), build123d (Apache-2.0)
 ve OCP/OpenCascade (LGPL) kendi lisanslarıyla, kurulum sırasında kaynaklarından indirilir.
