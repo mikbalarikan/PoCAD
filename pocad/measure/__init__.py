@@ -14,12 +14,12 @@ from pocad.measure.band import retained_arc
 from pocad.measure.bridge import flat_ceiling_spans
 from pocad.measure.draft import draft_angles, overhang_census, undercuts
 from pocad.measure.features import (
-                                    bore_census,
-                                    feature_census,
-                                    locate_bore,
-                                    min_internal_radius,
-                                    sharp_concave_edge_count,
-                                    sharp_concave_edges,
+    bore_census,
+    feature_census,
+    locate_bore,
+    min_internal_radius,
+    sharp_concave_edge_count,
+    sharp_concave_edges,
 )
 from pocad.measure.keepin import keepin_cone_free
 from pocad.measure.props import envelope, mass_properties
