@@ -40,6 +40,25 @@ Bunların hepsi PoCAD reposunda tek çatı altında, **agent'tan bağımsız bir
 | K-6 | **Müşteri ve marka verisi taşınmaz** | `library/`, `reference-jobs/`, `golden-examples/`, `examples/` (STL-to-CAD) gizli kalır. Test parçaları sentetik ve parametrik üretilir. |
 | K-7 | **Taşınan kod MIT lisansıyla PoCAD'e girer** | İki reponun sahibi aynı kişi. Her taşınan dosyanın başında kaynak notu bulunur. |
 
+### 2.1 Sürüm doğrulaması (2026-11-04, x86_64, Python 3.13)
+
+build123d 0.13.0 + cadquery-ocp-novtk 8.0.1.1 ile mevcut testler:
+
+| Test takımı | Sonuç |
+|---|---|
+| oguz-atolye `tools/tests`, değişiklik yapmadan | Test modülleri içe aktarılamıyor (OCP 8'de isimler değişmiş) |
+| oguz-atolye `tools/tests`, uyumluluk katmanıyla | **986 geçti, 2 kaldı.** Kalan ikisi `0.11.1` sürüm dizesini bekleyen testler. |
+| STL-to-CAD `stl-re-deliver` testleri | 33/33 geçti |
+| STL-to-CAD `stl-re-measure-intent` testleri | 28/28 geçti |
+
+OCP 8'deki değişiklikler:
+- `TopoDS.Face_s` vb. → `TopoDS.Face`
+- `TopTools_IndexedMapOfShape` / `…DataMapOfShapeListOfShape` → `OCP.collections.*`
+- `BRepTopAdaptor_FClass2d` → `IntTools_FClass2d`
+
+Bunlar `pocad/_ocp.py` adlı tek bir uyumluluk modülünde toplanır; taşınan kod OCP'yi doğrudan değil bu modül üzerinden kullanır.
+Python 3.12 ve ARM64 doğrulaması 12. bölümün 1. adımıdır.
+
 ## 3. Mimari
 
 ```
@@ -63,6 +82,7 @@ Bunların hepsi PoCAD reposunda tek çatı altında, **agent'tan bağımsız bir
 ```
 pocad/
   __init__.py
+  _ocp.py            YENİ: OCP 7.9/8.0 isim farkları için tek uyumluluk noktası
   result.py          ← oguz tools/result.py  (Result, gate; değişmeden)
   core/              ← oguz tools/core       (validity, step, mesh, boolean, fillet, shapes)
   measure/           ← oguz tools/measure    (wall, props, features, draft, radial, assembly …)
@@ -192,7 +212,7 @@ DELIVER  export + teslim klasörü                                   → KULLANI
 
 ## 12. Uygulama sırası (her biri ayrı küçük PR)
 
-1. Sürüm doğrulaması: oguz `tools/tests` 0.13 + Python 3.12'de (x86 ve ARM64 CI)
+1. Sürüm doğrulaması: `pocad/_ocp.py` + oguz `tools/tests` 0.13 ve Python 3.12'de (x86 ve ARM64 CI). x86 ve Python 3.13'te ön deneme yapıldı, bkz. §2.1
 2. `pocad.result` + `pocad.core` + testleri
 3. `pocad.measure` + testleri
 4. `pocad.project` + `pocad.build` (agentcad'siz build ve sürüm kaydı)
