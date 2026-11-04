@@ -7,9 +7,9 @@ ESKI_ADLAR = re.compile(r"\bTopoDS\.\w+_s\b|\bTopTools_Indexed\w*MapOfShape\w*|\
 
 
 def kaynaklar():
-    for base in ("pocad", "tests/fixtures"):
+    for base in ("pocad", "tests"):
         for p in sorted((ROOT / base).rglob("*.py")):
-            if p.name != "_ocp.py":
+            if p.name not in ("_ocp.py", "test_ocp_adlari.py"):
                 yield p
 
 

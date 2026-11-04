@@ -13,6 +13,7 @@ Kimlikler (R03, D-024, L-21 …) oguz-atolye'nin araştırma ve karar kayıtlar�
 ## Export and files
 
 | Trap | Seen | What `pocad` does | Pinned by |
+|---|---|---|---|
 | `export_step()` always writes AP214. It has no schema argument, and it stamps a default header over the model (`APIHeaderSection_MakeHeader(0).Apply()`), which resets FILE_SCHEMA | R03 §1, R04 §1, past jobs | `pocad.core.write_step` is the one delivery writer (D-024) and asserts the schema by reading the header back | `test_core.py::test_trap_export_step_ignores_the_schema_static` |
 | `Interface_Static.SetCVal_s("write.step.schema", ...)` returns False and does nothing until a STEP controller is initialised | R03 §1 | `write_step` initialises both STEP controllers before it sets anything, and checks every return value | the writer raises `ExportError` |
 | The writer settings are process-wide statics that stick across exports. build123d's `export_step` sets `write.surfacecurve.mode` and `write.precision.mode` and leaves them set (with `write_pcurves=False` the next file loses its 54 parametric curves); any code can set `write.step.unit=INCH`, and a 40 mm edge is then written as 1.5748 while every round-trip check passes | REFERENCE-LIBRARY §3.5, the core review (2026-09-19) | `write_step` pins every static that changes the file (`STATICS`, OCCT's defaults, the angle unit included: with `step.angleunit.mode=Deg` a seam pcurve is written as 360 in a file that declares radians) for the write and restores what was there; it reads the length unit back and refuses anything but millimetres | `test_core.py::test_the_writer_pins_its_statics_and_restores_whatever_was_set`, `::test_the_unit_reader_sees_a_file_that_is_not_in_millimetres` |
@@ -32,6 +33,7 @@ Kimlikler (R03, D-024, L-21 …) oguz-atolye'nin araştırma ve karar kayıtlar�
 ## Booleans and validity
 
 | Trap | Seen | What `pocad` does | Pinned by |
+|---|---|---|---|
 | A boolean that removes everything returns an empty `Compound` with volume 0 and `is_valid` True; other failures return `None` or raise | R02, REFERENCE-LIBRARY §3.5 | count solids (`pocad.core.solid_count`); treat all three as INCONCLUSIVE, never 0 | `test_core.py::test_trap_an_empty_boolean_is_a_valid_compound_with_no_volume` |
 | `BRepCheck_Analyzer.IsValid()` is true for a box missing a face and for an empty compound | R04 §1 | validity is three checks: one solid, a valid solid, no naked edges (`pocad.core.validity`) | `test_core.py::test_each_known_bad_part_fails_at_least_one_validity_check` |
 | BRepCheck also passes a solid that overlaps itself (a helix sweep with a pitch under twice the tube radius) and an inside-out solid (volume −1000 mm³) | the core review | `brep_valid` adds two stages: every solid encloses a positive volume, then BOPAlgo's argument analyzer | `test_core.py::test_a_solid_that_overlaps_itself_fails_only_the_analyzer_stage`, `::test_an_inside_out_solid_fails_brep_valid` |
@@ -51,5 +53,7 @@ Kimlikler (R03, D-024, L-21 …) oguz-atolye'nin araştırma ve karar kayıtlar�
 ## Modelling and measurement
 
 | Trap | Seen | What to do | Pinned by |
+|---|---|---|---|
+| Fillets fail where concave edges share a vertex, and the radius has a geometric ceiling. OCCT fillets only the edges it finds in the shape and silently skips one taken from a copy or from before a boolean | REFERENCE-LIBRARY §3.5, the core review | `pocad.core.fillet_ladder` tries radii largest first, refuses an edge that is not the shape's own, and takes a rung only when every edge is gone and one valid solid is left; it records the radius achieved | `test_core.py::test_the_ladder_takes_only_the_shapes_own_edges`, `::test_a_rung_that_leaves_an_edge_unfilleted_is_rejected` |
 | Index-based selectors change meaning after a fillet or boolean | R02 | select by geometry (position, normal, radius), never by index (D-027) | designer doctrine |
 | A measured 1.9999999 failed an exact ≥ 2.0 wall gate | REFERENCE-LIBRARY §3.5, L-21 | every comparison uses `pocad.result.gate` with the one tolerance band from GATES.md | `test_result.py::test_the_band_absorbs_float_noise_at_the_limit_and_nothing_more` |

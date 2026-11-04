@@ -13,7 +13,7 @@ Kaynak: `mikbalarikan/oguz-atolye` @ `ca27b1b` · Branch: `ccr-d7b7f275-1nefzn`
 - İçerik değişmez; değişebilecek olanlar yalnız şunlar:
   - içe aktarma yolları (`tools.` → `pocad.`)
   - OCP 8 adları (`pocad._ocp`)
-  - ortam değişkeni (`OGUZ_WORK` → `POCAD_WORK`, isteğe bağlı)
+  - ortam değişkeni (`OGUZ_WORK` → `POCAD_WORK`, isteğe bağlı) ve geçici klasör öneki (`oguz-analyzer-` → `pocad-analyzer-`)
   - sürüm dizesi testleri (0.11.1 → 0.13.0)
   - şema adı (`oguz-verdict-v1` → `pocad-verdict-v1`)
 - Kod yorumlarındaki D-/R-/U-/L- numaraları oguz-atolye karar kayıtlarına aittir. Silinmez; `pocad/core/__init__.py` bunu not eder.

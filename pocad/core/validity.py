@@ -201,7 +201,7 @@ class _Worker:
 
 
 def _scratch() -> str | None:
-    """${POCAD_WORK}/tmp (tanımlı değilse sistem geçicisi) for the analyzer's temporary files, off AppData (D-072)."""
+    """${POCAD_WORK}/tmp (the system temp folder when unset) for the analyzer's temporary files, off AppData (D-072)."""
     work = env_path("POCAD_WORK")
     if work is None:
         return None
