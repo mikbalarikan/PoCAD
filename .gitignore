@@ -3,3 +3,6 @@ __pycache__/
 .chat/
 .pocad/
 build/
+.venv/
+.pytest_cache/
+.ruff_cache/
