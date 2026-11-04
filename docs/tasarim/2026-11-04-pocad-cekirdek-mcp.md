@@ -82,7 +82,7 @@ Python 3.12 ve ARM64 doğrulaması 12. bölümün 1. adımıdır.
 ```
 pocad/
   __init__.py
-  _ocp.py            YENİ: OCP 7.9/8.0 isim farkları için tek uyumluluk noktası
+  _ocp.py            YENİ: OCP 8 isimleri için tek uyumluluk noktası
   result.py          ← oguz tools/result.py  (Result, gate; değişmeden)
   core/              ← oguz tools/core       (validity, step, mesh, boolean, fillet, shapes)
   measure/           ← oguz tools/measure    (wall, props, features, draft, radial, assembly …)

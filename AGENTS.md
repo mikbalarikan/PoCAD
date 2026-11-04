@@ -68,7 +68,8 @@ test atlatmak, silmek ya da `skip` eklemek yasak.
   - Telefon kurulumu ve `bin/`: agentcad kaldırılana kadar (Plan 09) agentcad 0.7.1,
     build123d 0.10.0, OCP 7.8.1.1, `ocp_gordon<0.3` (`scripts/setup-ubuntu.sh`).
     `bin/` ve `scripts/` kodu iki sürümde de çalışmalı.
-  - Bir sabiti değiştirirsen ilgili dosyaları ve README'yi birlikte güncelle.
+  - Bir sabiti değiştirirsen ilgili dosyaları, README'yi ve `tests/test_ocp.py::test_surumler_raporlanir`'ı
+    birlikte güncelle.
 - **OCP adları:** OCP koleksiyon tipleri, TopoDS downcast'leri ve sürümle değişen diğer adlar
   yalnız `pocad/_ocp.py` üzerinden kullanılır.
 - **Shebang'ler:** `bin/` içindeki `#!/data/data/com.termux/...` satırlarına dokunma.

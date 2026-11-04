@@ -3,6 +3,7 @@ import pytest
 
 pytestmark = pytest.mark.cad
 bd = pytest.importorskip("build123d")
+pytest.importorskip("OCP.collections", reason="pocad OCP 8 ister (geçiş dönemi: eski kurulumda OCP 7.8)")
 
 from OCP.TopAbs import TopAbs_EDGE, TopAbs_FACE, TopAbs_IN, TopAbs_OUT  # noqa: E402
 from OCP.TopExp import TopExp  # noqa: E402

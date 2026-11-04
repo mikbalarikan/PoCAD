@@ -7,6 +7,7 @@ pocad kodu bu adları doğrudan OCP'den değil buradan alır.
 
 import importlib.metadata as _md
 
+import OCP
 from OCP.collections import (
     IndexedDataMap_TopoDS_Shape_List_TopoDS_Shape_TopTools_ShapeMapHasher as IndexedDataMapOfShapeListOfShape,
 )
@@ -21,4 +22,4 @@ __all__ = ["IndexedDataMapOfShapeListOfShape", "IndexedMapOfShape", "FClass2d", 
 
 def versions():
     """Kurulu build123d ve OCP sürümleri (raporlar ve `pocad doctor` için)."""
-    return {"build123d": _md.version("build123d"), "ocp": _md.version("cadquery-ocp-novtk")}
+    return {"build123d": _md.version("build123d"), "ocp": OCP.__version__}

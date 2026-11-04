@@ -51,7 +51,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-cad.txt
+          cache-dependency-path: |
+            requirements-cad.txt
+            requirements-dev.txt
       - run: pip install -r requirements-cad.txt
       - name: CAD çekirdeği içe aktarılabiliyor mu
         run: python -c "from pocad import _ocp; print(_ocp.versions())"
