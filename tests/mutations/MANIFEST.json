@@ -1,0 +1,804 @@
+{
+  "schema": "pocad-mutations-v1",
+  "about": "oguz-atolye U-19 (R04 §6): four mutation families, one mutant each, for every check the code offers (every name registered in pocad.core and pocad.measure, and every STEP round-trip result). Each check PASSes on its base fixture. Each mutant is KILLED (the gate FAILs), INCONCLUSIVE (the check cannot measure it, which is never a pass), or SURVIVED, and a survivor names its blind spot and the check that covers it. A check no family kills names its known-bad fixture. The limits in the gates are test limits that the base passes, not GATES values (D-009). tests/test_mutations.py proves every row.",
+  "families": {
+    "resize": "one dimension of the base changed",
+    "relocate": "one feature, or the part, moved",
+    "remove": "one feature or face taken away",
+    "degrade": "the geometry re-exported through build123d export_step (AP214) and read back, or the STL meshed at 0.5 mm instead of 0.01 mm"
+  },
+  "checks": {
+    "solid_count": {
+      "module": "pocad.core.validity",
+      "base": "bracket()",
+      "gate": "== 1",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "counts solids, not their size; the wall and envelope checks see a thinner plate"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "bracket() through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "an AP214 file still holds one solid; step_schema catches the schema"
+      }
+    },
+    "brep_valid": {
+      "module": "pocad.core.validity",
+      "base": "bracket()",
+      "gate": "== 1",
+      "known_bad": "tests/fixtures/parts.py helix_sweep(): coils that overlap, one closed solid that BRepCheck passes and BOPAlgo finds self-intersecting; also bow_tie() and inside_out() (test_core.py)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "a thinner plate is valid topology"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "two valid solids are valid topology; solid_count catches them"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "SURVIVED",
+        "blind_spot": "an open shell is valid topology (R04); naked_edges and solid_count catch it"
+      },
+      "degrade": {
+        "mutant": "bracket() through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "the AP214 re-import is valid topology; step_schema catches the schema"
+      }
+    },
+    "naked_edges": {
+      "module": "pocad.core.validity",
+      "base": "bracket()",
+      "gate": "== 0",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "a thinner plate is still closed"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "two closed solids have no naked edge; solid_count catches them"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "bracket() through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "the AP214 re-import is closed; step_schema catches the schema"
+      }
+    },
+    "step_schema": {
+      "module": "pocad.core.step",
+      "base": "bracket() written by write_step and read back",
+      "gate": "== 1 (the delivered file is AP242)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "reads the file header, not the geometry"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "reads the file header, not the geometry"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "SURVIVED",
+        "blind_spot": "reads the file header, not the geometry"
+      },
+      "degrade": {
+        "mutant": "the AP214 file from build123d export_step compared with bracket() (compare_step)",
+        "expect": "KILLED"
+      }
+    },
+    "step_roundtrip_solids": {
+      "module": "pocad.core.step",
+      "base": "bracket() written by write_step and read back",
+      "gate": "== 1 (a part file)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "a thinner plate is still one solid"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the AP214 file from build123d export_step compared with bracket() (compare_step)",
+        "expect": "SURVIVED",
+        "blind_spot": "the AP214 file still holds one solid; step_schema catches the schema"
+      }
+    },
+    "step_roundtrip_volume_delta": {
+      "module": "pocad.core.step",
+      "base": "bracket() written by write_step and read back",
+      "gate": "<= 0 mm3 within the band",
+      "known_bad": "fault injection: a reader that returns the part without its top face (test_core.py)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "compares the file with the shape it came from, so a design change passes; it catches a lossy writer or reader, proved by fault injection in test_core.py"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "as for resize"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "SURVIVED",
+        "blind_spot": "as for resize"
+      },
+      "degrade": {
+        "mutant": "the AP214 file from build123d export_step compared with bracket() (compare_step)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "step_roundtrip_faces_delta": {
+      "module": "pocad.core.step",
+      "base": "bracket() written by write_step and read back",
+      "gate": "== 0",
+      "known_bad": "fault injection: a reader that returns the part without its top face (test_core.py)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "compares the file with the shape it came from, so a design change passes; it catches a lossy writer or reader, proved by fault injection"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "as for resize"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "SURVIVED",
+        "blind_spot": "as for resize"
+      },
+      "degrade": {
+        "mutant": "the AP214 file from build123d export_step compared with bracket() (compare_step)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 keeps every face; step_schema catches the schema"
+      }
+    },
+    "step_roundtrip_labels": {
+      "module": "pocad.core.step",
+      "base": "bracket() written by write_step and read back",
+      "gate": "== 1",
+      "known_bad": "an assembly with an unnamed part: pair(label_b=\"\") (test_core.py)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "the part keeps its name"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "two solids under one name keep the name; the solid counts catch them"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "SURVIVED",
+        "blind_spot": "an open shell keeps the part's name; the solid counts and naked_edges catch it"
+      },
+      "degrade": {
+        "mutant": "the AP214 file from build123d export_step compared with bracket() (compare_step)",
+        "expect": "SURVIVED",
+        "blind_spot": "build123d's writer keeps the name; step_schema catches the schema"
+      }
+    },
+    "step_roundtrip_valid": {
+      "module": "pocad.core.step",
+      "base": "bracket() written by write_step and read back",
+      "gate": "== 1",
+      "known_bad": "fault injection: a reader that returns the self-intersecting bow_tie() (test_core.py)",
+      "resize": {
+        "mutant": "bracket(thickness=1.0): the plate thinned from 4.0 to 1.0 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "a thinner plate re-imports valid"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0): the boss lifted 1.0 mm off the plate",
+        "expect": "SURVIVED",
+        "blind_spot": "two valid solids re-import valid; the solid counts catch them"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()): the top face removed, an open shell that keeps the part's name",
+        "expect": "SURVIVED",
+        "blind_spot": "an open shell is valid topology (R04); the solid counts and naked_edges catch it"
+      },
+      "degrade": {
+        "mutant": "the AP214 file from build123d export_step compared with bracket() (compare_step)",
+        "expect": "SURVIVED",
+        "blind_spot": "the AP214 re-import is valid; step_schema catches the schema"
+      }
+    },
+    "stl_max_sagitta": {
+      "module": "pocad.core.mesh",
+      "base": "bracket() meshed at 0.01 mm, 0.1 rad",
+      "gate": "<= 0.01 mm",
+      "resize": {
+        "mutant": "bracket(thickness=1.0) meshed at 0.01 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "the mesh follows whatever geometry it is given"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0) meshed at 0.01 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "the mesh follows whatever geometry it is given"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()) meshed at 0.01 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "an open shell meshes within tolerance; the validity checks catch it"
+      },
+      "degrade": {
+        "mutant": "bracket() meshed at 0.5 mm, 0.8 rad",
+        "expect": "KILLED"
+      }
+    },
+    "common_volume": {
+      "module": "pocad.core.boolean",
+      "base": "pair(): two 10 mm cubes 0.30 mm apart",
+      "gate": "<= 0 mm3 within the band",
+      "resize": {
+        "mutant": "pair(grow=0.5): the cover grown 0.5 mm toward the base",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "pair(gap=-0.2): the cover moved 0.5 mm toward the base",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "the cover replaced by open_box(), an open shell",
+        "expect": "INCONCLUSIVE"
+      },
+      "degrade": {
+        "mutant": "both parts through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "an AP214 round trip keeps the gap; step_schema catches the schema"
+      }
+    },
+    "min_wall": {
+      "module": "pocad.measure.wall",
+      "base": "tray(): 3.0 mm walls and floor",
+      "gate": ">= 1.2 mm (spacing 1.0 mm; every face pair a ray joined, or whose bounding boxes lie closer than the walls the rays found, also measured exactly)",
+      "resize": {
+        "mutant": "tray(wall=1.1)",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "tray(shift=1.9): the cavity moved, one wall 1.1 mm",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "tray(open_side=True): the +X wall cut away",
+        "expect": "SURVIVED",
+        "blind_spot": "a missing wall is not a thin one; feature_census sees it"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "min_wall_mesh": {
+      "module": "pocad.measure.wall",
+      "base": "tray() meshed at 0.01 mm",
+      "gate": ">= 1.2 mm",
+      "resize": {
+        "mutant": "tray(wall=1.1) meshed at 0.01 mm",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "tray(shift=1.9) meshed at 0.01 mm",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "tray(open_side=True) meshed at 0.01 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "a missing wall is not a thin one; feature_census sees it"
+      },
+      "degrade": {
+        "mutant": "tray() meshed at 0.5 mm, 0.8 rad",
+        "expect": "SURVIVED",
+        "blind_spot": "flat walls mesh exactly at any tolerance; mesh_deviation catches a coarse mesh of curved faces"
+      }
+    },
+    "min_wall_wide": {
+      "module": "pocad.measure.wall",
+      "base": "rounded_box(5.0, 2.0, inner=3.0): an R5 outer round over a concentric R3 cavity round, 2.0 mm all round",
+      "gate": ">= 1.5 mm (spacing 1.0 mm; min_wall's 45° reading)",
+      "resize": {
+        "mutant": "rounded_box(5.0, 2.0, inner=1.0): the cavity round shrunk to R1, the corner 1.17 mm at 45°",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "rounded_box(5.0, 2.0, inner=3.0, shift=0.8): the cavity moved, one wall 1.2 mm",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "rounded_box(5.0, 2.0): the cavity round removed, a sharp corner 0.757 mm under the R5",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "mesh_census": {
+      "module": "pocad.measure.wall",
+      "base": "bracket() meshed at 0.01 mm",
+      "gate": "bodies == 1, naked_edges == 0, winding == 1, and volume > 0: one closed shell facing out",
+      "resize": {
+        "mutant": "bracket(thickness=1.0) meshed",
+        "expect": "SURVIVED",
+        "blind_spot": "counts bodies and open edges, not sizes; min_wall_mesh and mesh_deviation see sizes"
+      },
+      "relocate": {
+        "mutant": "bracket(boss_lift=1.0) meshed: two bodies",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "without_top_face(bracket()) meshed: an open mesh",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "bracket() meshed at 0.5 mm, 0.8 rad",
+        "expect": "SURVIVED",
+        "blind_spot": "a coarse mesh is still one closed shell; mesh_deviation catches it"
+      }
+    },
+    "mesh_deviation": {
+      "module": "pocad.measure.wall",
+      "base": "tube() meshed at 0.01 mm, against tube()",
+      "gate": "<= 0.011 mm",
+      "resize": {
+        "mutant": "tube(od=30.5) meshed, against tube()",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "tube() moved 0.5 mm in X, meshed, against tube()",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "without_top_face(tube()) meshed, against tube(): the top face missing from the mesh",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "tube() meshed at 0.5 mm, 0.8 rad",
+        "expect": "KILLED"
+      }
+    },
+    "bore_census": {
+      "module": "pocad.measure.features",
+      "base": "holed_plate(): Ø5.0 and Ø3.2 through, Ø4.1 blind",
+      "gate": "== 3 bores",
+      "resize": {
+        "mutant": "holed_plate(big=5.4)",
+        "expect": "SURVIVED",
+        "blind_spot": "counts bores, not their size; locate_bore gates the diameter"
+      },
+      "relocate": {
+        "mutant": "holed_plate(shift=0.5): the Ø5 moved 0.5 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "counts bores, not where they are; locate_bore gates the position"
+      },
+      "remove": {
+        "mutant": "holed_plate(small=False): the Ø3.2 gone",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "locate_bore": {
+      "module": "pocad.measure.features",
+      "base": "holed_plate(), the bore nearest (15, 20, 0) along Z",
+      "gate": "diameter == 5.0 mm and offset from the bore's axis segment <= 0.1 mm",
+      "resize": {
+        "mutant": "holed_plate(big=5.4)",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "holed_plate(shift=0.5): the mutant v1 could not kill (R04)",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "holed_plate(big=None): the Ø5 gone, the nearest bore is the Ø3.2 20 mm away",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "feature_census": {
+      "module": "pocad.measure.features",
+      "base": "holed_plate()",
+      "gate": "every count equal to the base's (the plan's features, gate U-05)",
+      "resize": {
+        "mutant": "holed_plate(big=5.4)",
+        "expect": "SURVIVED",
+        "blind_spot": "counts faces and bores, not their sizes; locate_bore gates the diameter"
+      },
+      "relocate": {
+        "mutant": "holed_plate(shift=0.5)",
+        "expect": "SURVIVED",
+        "blind_spot": "counts, not positions; locate_bore gates the position"
+      },
+      "remove": {
+        "mutant": "holed_plate(small=False)",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "min_internal_radius": {
+      "module": "pocad.measure.features",
+      "base": "pocket(1.5) along the tool axis Z: R1.5 vertical corners; the sharp floor edges a flat end mill leaves do not count",
+      "gate": ">= 1.0 mm along Z",
+      "resize": {
+        "mutant": "pocket(0.8)",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "pocket(1.5, shift=2.0): the pocket moved 2 mm",
+        "expect": "SURVIVED",
+        "blind_spot": "reads radii, not where the pocket is; a located gate on the pocket (its walls, its position) sees it"
+      },
+      "remove": {
+        "mutant": "pocket(None): the fillets removed, radius 0",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "sharp_concave_edge_count": {
+      "module": "pocad.measure.features",
+      "base": "pocket(1.5, floor=True): corners and floor edges filleted",
+      "gate": "== 0",
+      "resize": {
+        "mutant": "pocket(0.8, floor=True)",
+        "expect": "SURVIVED",
+        "blind_spot": "counts sharp edges, not radii; min_internal_radius gates the radius"
+      },
+      "relocate": {
+        "mutant": "pocket(1.5, floor=True, shift=2.0)",
+        "expect": "SURVIVED",
+        "blind_spot": "counts sharp edges, not where they are; a located gate on the pocket sees it"
+      },
+      "remove": {
+        "mutant": "pocket(1.5): the floor fillets removed, eight sharp floor edges (four straight, four arcs)",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "draft_angles": {
+      "module": "pocad.measure.draft",
+      "base": "drafted_boss(3.0), pull +Z",
+      "gate": ">= 1.5°",
+      "resize": {
+        "mutant": "drafted_boss(1.0)",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "drafted_boss(3.0) moved 5 mm in X",
+        "expect": "SURVIVED",
+        "blind_spot": "draft does not depend on position; envelope sees a moved part"
+      },
+      "remove": {
+        "mutant": "drafted_boss(0.0): the draft removed, a cylinder",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "undercuts": {
+      "module": "pocad.measure.draft",
+      "base": "the 30 x 20 x 12 block undercut_part() is cut from, pull +Z",
+      "gate": "== 0 blocked samples",
+      "resize": {
+        "mutant": "the block 6 mm tall",
+        "expect": "SURVIVED",
+        "blind_spot": "a shorter block has nothing overhanging either; the gate is about access, not size"
+      },
+      "relocate": {
+        "mutant": "the block moved 5 mm in X",
+        "expect": "SURVIVED",
+        "blind_spot": "access does not depend on position; envelope sees a moved part"
+      },
+      "remove": {
+        "mutant": "undercut_part(): a T-slot cut from the block, 66 of 717 samples blocked (R04)",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "overhang_census": {
+      "module": "pocad.measure.draft",
+      "base": "ledge(50.0, foot=0.0), build +Z: a ledge chamfered underneath at 50°, the column and a 5 mm foot on the bed",
+      "gate": ">= 45°",
+      "resize": {
+        "mutant": "ledge(30.0, foot=0.0): the chamfer at 30°",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "ledge(50.0, foot=0.5): the foot lifted 0.5 mm off the bed, a flat ceiling the bed band (0.01 mm) must not swallow",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "ledge(0.0, foot=0.0): the chamfer removed, a flat-bottomed ledge",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "flat_ceiling_spans": {
+      "module": "pocad.measure.bridge",
+      "base": "tunnel(4.0), build +Z: a 4 mm tunnel from the bed through a 20 mm block, its flat ceiling carried by both walls",
+      "gate": "<= 5 mm (max_span 5)",
+      "resize": {
+        "mutant": "tunnel(7.0): the tunnel widened to 7 mm",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "tunnel(4.0, shift=8.0): the tunnel moved 8 mm to the block's side, its right wall gone: carried on one side, 8 mm",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "without_top_face(tunnel(4.0)): an open shell",
+        "expect": "INCONCLUSIVE"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "keepin_cone_free": {
+      "module": "pocad.measure.keepin",
+      "base": "keepin_plug(0.5): a cone plug 0.5 mm inside the REQ-04 envelope r(t) <= sqrt(2)(16.330 - t) - 0.75, keep in",
+      "gate": ">= 0 mm",
+      "resize": {
+        "mutant": "keepin_plug(-0.3): the plug 0.3 mm outside the envelope",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "the plug moved 1 mm in X, off the envelope's axis",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "without_top_face(keepin_plug(0.5)): an open shell",
+        "expect": "INCONCLUSIVE"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "retained_arc": {
+      "module": "pocad.measure.band",
+      "base": "slotted_collar(): an R8 bore with three 3 mm entry slots, 295.16 deg retained, band z 0 to 10",
+      "gate": ">= 195 deg (min_total_deg 195)",
+      "resize": {
+        "mutant": "slotted_collar(width=8.0): the slots widened to 8 mm, 186.27 deg retained",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "slotted_collar(tilt_deg=20.0): the slots tilted 20 deg about their radial line",
+        "expect": "SURVIVED",
+        "blind_spot": "the total does not depend on where the slots stand round the axis, and tilted ones take about as much; radial_profile reads what lies at which angle"
+      },
+      "remove": {
+        "mutant": "without_top_face(slotted_collar()): an open shell",
+        "expect": "INCONCLUSIVE"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "interference": {
+      "module": "pocad.measure.assembly",
+      "base": "pair(): two 10 mm cubes 0.30 mm apart",
+      "gate": "<= 0 mm3",
+      "resize": {
+        "mutant": "pair(grow=0.5)",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "pair(gap=-0.2)",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "the cover without its top face, an open shell",
+        "expect": "INCONCLUSIVE"
+      },
+      "degrade": {
+        "mutant": "both parts through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "clearance": {
+      "module": "pocad.measure.assembly",
+      "base": "pair(): two 10 mm cubes 0.30 mm apart",
+      "gate": ">= 0.25 mm",
+      "resize": {
+        "mutant": "pair(grow=0.2): the gap 0.10 mm",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "pair(gap=0.1)",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "the cover without its top face, an open shell",
+        "expect": "SURVIVED",
+        "blind_spot": "measures between surfaces, so an open shell still has its distance; validity catches the shell"
+      },
+      "degrade": {
+        "mutant": "both parts through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "engaged_area": {
+      "module": "pocad.measure.assembly",
+      "base": "bead_in_groove(): a shaft's 45° bead resting on a housing's groove flank, pushed down the axis 0.01 mm: π(11² - 10.2²) = 53.28 mm²",
+      "gate": ">= 50 mm2",
+      "resize": {
+        "mutant": "bead_in_groove(bead=10.6): the bead R10.6, 26.14 mm²",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "bead_in_groove(lift=0.3): the shaft lifted 0.3 mm off the flank, 0 mm²",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "the housing without its top face, an open shell",
+        "expect": "INCONCLUSIVE"
+      },
+      "degrade": {
+        "mutant": "both parts through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "envelope": {
+      "module": "pocad.measure.props",
+      "base": "tray(): 40 x 30 x 20 at the origin",
+      "gate": "size_x <= 40 mm (the bed) and min_x == 0 (the datum), reported apart (L-12)",
+      "resize": {
+        "mutant": "tray(length=41)",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "tray(at=(5, 0, 0))",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "tray(open_side=True)",
+        "expect": "SURVIVED",
+        "blind_spot": "the box around a part missing a wall is unchanged; feature_census sees the wall"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "mass_properties": {
+      "module": "pocad.measure.props",
+      "base": "tube() at 1240 kg/m³",
+      "gate": "mass within ±5 % of the base's",
+      "resize": {
+        "mutant": "scaled_tube(1.05): +15.8 % mass",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "tube() moved 5 mm in X",
+        "expect": "SURVIVED",
+        "blind_spot": "mass does not depend on position; envelope sees a moved part"
+      },
+      "remove": {
+        "mutant": "solid_rod(): the bore filled",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "radial_extent": {
+      "module": "pocad.measure.radial",
+      "base": "relieved_ring(): the outer wall at the release angle 0°, 1 mm above the rim, R19.6",
+      "gate": "<= 19.6 mm",
+      "resize": {
+        "mutant": "relieved_ring(relief=19.8): a relief 0.2 mm shallower",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "relieved_ring(turn_deg=30): the reliefs turned 30° off the release angle",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "relieved_ring(relief_from=3): the bottom 3 mm of each relief removed (a known snap-fit defect)",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    },
+    "radial_profile": {
+      "module": "pocad.measure.radial",
+      "base": "relieved_ring(): its reliefs cut from z -1 to 9; the outer wall at the release angles 0°, 120°, 240° over the band z 3 to 8 (the short relief's modelled cut) widened by 1 mm to 2 to 9, every 0.25 mm; max R19.6",
+      "gate": "max <= 19.6 mm",
+      "resize": {
+        "mutant": "relieved_ring(relief=19.8): a relief 0.2 mm shallower",
+        "expect": "KILLED"
+      },
+      "relocate": {
+        "mutant": "relieved_ring(turn_deg=30): the reliefs turned 30° off the release angles",
+        "expect": "KILLED"
+      },
+      "remove": {
+        "mutant": "relieved_ring(relief_from=3): the bottom 3 mm of each relief removed (a known snap-fit defect); only the widened window sees it",
+        "expect": "KILLED"
+      },
+      "degrade": {
+        "mutant": "the base through build123d export_step (AP214)",
+        "expect": "SURVIVED",
+        "blind_spot": "AP214 carries the geometry exactly; step_schema catches the schema"
+      }
+    }
+  }
+}
