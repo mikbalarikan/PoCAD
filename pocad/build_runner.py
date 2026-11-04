@@ -14,6 +14,7 @@ sürüme kopyalanmaz.
 from __future__ import annotations
 
 import json
+import os
 import runpy
 import sys
 import traceback
@@ -21,6 +22,36 @@ from pathlib import Path
 
 RUNNER_FILE = "_runner.json"
 TRACE_CHARS = 4000
+WATCHDOG_GRACE_S = 10
+
+# Bekçi: çalıştırıcıyla aynı süreç grubunda küçük bir süreç. Build'i başlatan süreç (örneğin
+# agent oturumu kapanınca ölen MCP sunucusu) ölürse ya da zaman sınırı aşılırsa grubun tamamını
+# durdurur. Ayrı süreçtir, çünkü OCCT uzun işlerde GIL'i bırakmaz; bir iş parçacığı çalışamaz.
+WATCHDOG = """
+import os, signal, sys, time
+parent, limit = int(sys.argv[1]), float(sys.argv[2])
+end = time.monotonic() + limit
+while time.monotonic() < end:
+    time.sleep(0.5)
+    try:
+        os.kill(parent, 0)
+    except ProcessLookupError:
+        break
+    except PermissionError:
+        pass
+os.killpg(os.getpgid(0), signal.SIGKILL)
+"""
+
+
+def _start_watchdog(config: dict) -> None:
+    # yalnız kendi süreç grubunun lideriyken (pocad.build start_new_session ile başlatır):
+    # aksi halde killpg çağıranın grubunu da öldürürdü
+    if os.name != "posix" or "parent_pid" not in config or os.getpgid(0) != os.getpid():
+        return
+    import subprocess
+    subprocess.Popen([sys.executable, "-I", "-c", WATCHDOG, str(config["parent_pid"]),
+                      str(config["timeout_s"] + WATCHDOG_GRACE_S)],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def _fail(vdir: Path, error: str) -> int:
@@ -43,6 +74,7 @@ def main(argv: list[str]) -> int:
     # proje kökü en sona: model.py yanındaki yardımcı modüller içe aktarılır, ama standart
     # kütüphanenin önüne geçemez (pocad.build çalıştırıcıyı -P ile başlatır)
     sys.path.append(config["project_root"])
+    _start_watchdog(config)
     try:
         namespace = runpy.run_path(str(model), run_name="__pocad_model__")
     except SystemExit as exc:

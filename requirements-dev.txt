@@ -1,3 +1,4 @@
 pytest>=8
 ruff>=0.6
 numpy>=1.26  # pocad.result numpy sayılarını düz değere çevirir; testleri CAD'siz işte de koşsun
+mcp==2.3.0   # pocad-mcp sunucusu (MIT): çalışma zamanı bağımlılığı da; testleri CAD'siz işte de koşar

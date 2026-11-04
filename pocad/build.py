@@ -76,7 +76,8 @@ def build(project: Project, label: str = "") -> dict:
 
 def _run(project: Project, model: Path, vdir: Path, created: str):
     """Çalıştırıcıyı başlatır; (hata ya da None, log kuyruğu, çalıştırıcı sonucu) döndürür."""
-    config = {"timestamp": created[:-1], "project_root": str(project.root),
+    config = {"timestamp": created[:-1], "project_root": str(project.root), "parent_pid": os.getpid(),
+              "timeout_s": float(project.export["timeout_s"]),
               **{k: float(project.export[k]) for k in ("stl_tolerance", "stl_angular_tolerance")}}
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONPATH": os.pathsep.join(
         p for p in (str(PACKAGE_ROOT), os.environ.get("PYTHONPATH", "")) if p)}
