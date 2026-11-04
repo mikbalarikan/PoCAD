@@ -5,6 +5,11 @@ kullanım (pocad.build çağırır): python -m pocad.build_runner MODEL VDIR CON
 Kullanıcı kodu bu süreçte çalışır; bir çökme ya da sonsuz döngü çağıran süreci
 etkilemez. Sonuç VDIR/_runner.json'a yazılır; çağıran süreç onu report.json'a çevirir.
 Bir ölçümün yapılamaması build hatası değildir: ölçüm INCONCLUSIVE döner (pocad.result).
+
+model.py sürüm klasöründeki kopyasından (versions/vN/model.py) çalışır; `__file__` o
+kopyayı gösterir. Çalışma dizini proje köküdür: proje dosyalarına göreli yolla eriş
+(`Path("olculer.csv")`). model.py yanındaki yardımcı modüller içe aktarılabilir ama
+sürüme kopyalanmaz.
 """
 from __future__ import annotations
 
@@ -35,6 +40,9 @@ def _user_trace(model: Path) -> str:
 
 def main(argv: list[str]) -> int:
     model, vdir, config = Path(argv[0]), Path(argv[1]), json.loads(argv[2])
+    # proje kökü en sona: model.py yanındaki yardımcı modüller içe aktarılır, ama standart
+    # kütüphanenin önüne geçemez (pocad.build çalıştırıcıyı -P ile başlatır)
+    sys.path.append(config["project_root"])
     try:
         namespace = runpy.run_path(str(model), run_name="__pocad_model__")
     except SystemExit as exc:
@@ -44,7 +52,10 @@ def main(argv: list[str]) -> int:
 
     shape = namespace.get("result")
     if shape is None:
-        return _fail(vdir, "model.py modül düzeyinde `result` değişkeni tanımlamadı (ya da None)")
+        hint = ""
+        if "__main__" in model.read_text(encoding="utf-8", errors="replace"):
+            hint = "; `if __name__ == \"__main__\":` bloğu build sırasında çalışmaz, `result`'ı onun dışında ata"
+        return _fail(vdir, "model.py modül düzeyinde `result` değişkeni tanımlamadı (ya da None)" + hint)
 
     from build123d import export_gltf
     from OCP.TopoDS import TopoDS_Shape

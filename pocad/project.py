@@ -41,7 +41,11 @@ SPEC_TEMPLATE = """# {name}: şartname
 |---|---|---|---|---|
 """
 
-MODEL_TEMPLATE = '''"""{name}: parametrik model. Parçayı modül düzeyinde `result` değişkenine ata."""
+MODEL_TEMPLATE = '''"""{name}: parametrik model. Parçayı modül düzeyinde `result` değişkenine ata.
+
+Build bu dosyanın versions/vN/ altındaki kopyasını proje kökünde çalıştırır: dosyalara
+göreli yolla eriş (Path("olculer.csv")), `__file__`'a değil.
+"""
 from build123d import Box
 
 result = Box(20, 10, 5)
@@ -96,15 +100,31 @@ def init(path: Path | str, *, name: str, process: str = "fdm", machine: str = ""
 
 
 def open_project(path: Path | str) -> Project:
-    """Var olan bir projeyi pocad.toml'dan okur."""
+    """Var olan bir projeyi pocad.toml'dan okur ve değerlerini doğrular."""
     root = Path(path).resolve()
     toml = root / "pocad.toml"
     if not toml.is_file():
         raise FileNotFoundError(f"pocad.toml yok: {root} bir PoCAD projesi değil")
-    data = tomllib.loads(toml.read_text(encoding="utf-8"))
-    export = {**DEFAULT_EXPORT, **data.get("export", {})}
-    return Project(root=root, name=data.get("name", root.name), process=data.get("process", "fdm"),
-                   machine=data.get("machine", ""), export=export)
+    try:
+        data = tomllib.loads(toml.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{toml}: TOML okunamadı ({exc})") from exc
+    name, process = data.get("name", root.name), data.get("process", "fdm")
+    machine, export = data.get("machine", ""), data.get("export", {})
+    if not isinstance(name, str) or not NAME_RE.match(name):
+        raise ValueError(f"{toml}: name harf, rakam, '-' ve '_' içerebilir, {name!r} değil")
+    if process not in PROCESSES:
+        raise ValueError(f"{toml}: process şimdilik yalnız {', '.join(PROCESSES)}, {process!r} değil")
+    if not isinstance(machine, str):
+        raise ValueError(f"{toml}: machine bir metin olmalı, {machine!r} değil")
+    if not isinstance(export, dict):
+        raise ValueError(f"{toml}: [export] bir tablo olmalı")
+    export = {**DEFAULT_EXPORT, **export}
+    for key in DEFAULT_EXPORT:
+        value = export[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not value > 0:
+            raise ValueError(f"{toml}: export.{key} pozitif bir sayı olmalı, {value!r} değil")
+    return Project(root=root, name=name, process=process, machine=machine, export=export)
 
 
 class Registry:
@@ -116,10 +136,18 @@ class Registry:
     def versions(self) -> list[dict]:
         if not self.path.exists():
             return []
-        data = json.loads(self.path.read_text(encoding="utf-8"))
-        if data.get("schema") != REGISTRY_SCHEMA:
-            raise ValueError(f"{self.path}: şema {data.get('schema')!r}, beklenen {REGISTRY_SCHEMA}")
-        return data["versions"]
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            raise ValueError(f"{self.path}: sürüm kaydı okunamadı ({exc})") from exc
+        if not isinstance(data, dict) or data.get("schema") != REGISTRY_SCHEMA:
+            found = data.get("schema") if isinstance(data, dict) else type(data).__name__
+            raise ValueError(f"{self.path}: şema {found!r}, beklenen {REGISTRY_SCHEMA}")
+        versions = data.get("versions")
+        if not isinstance(versions, list) or not all(isinstance(v, dict) and isinstance(v.get("n"), int)
+                                                     for v in versions):
+            raise ValueError(f"{self.path}: 'versions' her satırı numaralı (n) bir liste olmalı")
+        return versions
 
     def next_number(self) -> int:
         return max((v["n"] for v in self.versions()), default=0) + 1
@@ -135,13 +163,18 @@ class Registry:
         self._write(versions + [entry])
 
     def _write(self, versions: list[dict]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
         text = json.dumps({"schema": REGISTRY_SCHEMA, "versions": versions}, ensure_ascii=False, indent=2)
-        fd, tmp = tempfile.mkstemp(prefix=".registry-", dir=self.path.parent)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(text + "\n")
-            os.replace(tmp, self.path)
-        except BaseException:
-            Path(tmp).unlink(missing_ok=True)
-            raise
+        atomic_write(self.path, text + "\n")
+
+
+def atomic_write(path: Path, text: str) -> None:
+    """Metni geçici dosyaya yazıp yerine taşır: okuyan hiçbir zaman yarım dosya görmez."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise

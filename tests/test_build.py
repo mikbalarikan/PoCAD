@@ -111,3 +111,111 @@ def test_betik_proje_dizininde_calisir(tmp_path):
     (p.root / "w.txt").write_text("12")
     assert build.build(p, "göreli")["status"] == "built"
     assert round(olcum(rapor(p, 1), "envelope_size_x"), 6) == 12
+
+
+# ── sağlamlık (Plan 04 review) ───────────────────────────────────────────────
+def test_utf8_olmayan_cikti_build_i_cokertmez(tmp_path):
+    p = proje(tmp_path, model="import sys\nsys.stdout.buffer.write(b'\\xff\\xfe bozuk\\n')\n" + KUTU)
+    out = build.build(p, "bayt")
+    assert out["status"] == "built", out["error"]
+    assert "bozuk" in rapor(p, 1)["log"]
+
+
+def test_yarim_kalmis_surum_klasoru_numarayi_kilitlemez(tmp_path):
+    p = proje(tmp_path)
+    p.version_dir(1).mkdir(parents=True)             # çökmüş bir build'den kalan klasör
+    out = build.build(p, "sonraki")
+    assert out["n"] == 2 and out["status"] == "built"
+    assert build.build(p, "bir sonraki")["n"] == 3
+
+
+def test_hazirlik_hatasi_da_basarisiz_surum_olarak_kaydedilir(tmp_path):
+    p = proje(tmp_path)
+    p.model.unlink()
+    out = build.build(p, "modelsiz")
+    assert out["status"] == "failed" and "model.py yok" in out["error"]
+    p.model.write_text(KUTU)
+    assert build.build(p, "model geldi")["status"] == "built"
+    assert [v["status"] for v in p.registry().versions()] == ["failed", "built"]
+
+
+def surec_var(pid):
+    import os
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def test_modelin_biraktigi_surec_buildi_bekletmez_ve_durdurulur(tmp_path):
+    model = ("import subprocess, sys\n"
+             "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(300)'])\n"
+             "open('pid.txt', 'w').write(str(child.pid))\n" + KUTU)
+    p = proje(tmp_path, model=model, timeout_s=60)
+    out = build.build(p, "torun")
+    assert out["status"] == "built", out["error"]
+    assert out["duration_s"] < 50
+    pid = int((p.root / "pid.txt").read_text())
+    import time
+    for _ in range(50):
+        if not surec_var(pid):
+            break
+        time.sleep(0.1)
+    assert not surec_var(pid)
+
+
+def test_zaman_asiminda_torun_surecler_de_durdurulur(tmp_path):
+    model = ("import subprocess, sys, time\n"
+             "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(300)'])\n"
+             "open('pid.txt', 'w').write(str(child.pid))\n"
+             "time.sleep(300)\n")
+    p = proje(tmp_path, model=model, timeout_s=3)
+    out = build.build(p, "asım")
+    assert out["status"] == "failed" and "zaman aşımı" in out["error"]
+    import time
+    pid = int((p.root / "pid.txt").read_text())
+    for _ in range(50):
+        if not surec_var(pid):
+            break
+        time.sleep(0.1)
+    assert not surec_var(pid)
+
+
+@pytest.mark.parametrize("model,beklenen", [
+    ("import os\nos._exit(3)\n", "çıkış kodu 3"),
+    ("import ctypes\nctypes.string_at(0)\n", "SIGSEGV"),
+])
+def test_yorumlayici_cokmesi_kaydedilir(tmp_path, model, beklenen):
+    out = build.build(proje(tmp_path, model=model), "çökme")
+    assert out["status"] == "failed" and beklenen in out["error"]
+
+
+def test_basarisiz_buildde_yarim_ciktilar_silinir(tmp_path):
+    p = proje(tmp_path, model=KUTU + "import time\ntime.sleep(300)\n", timeout_s=2)
+    build.build(p, "asım")
+    assert not any((p.version_dir(1) / f).exists() for f in build.OUTPUTS)
+    assert rapor(p, 1)["files"] == {}
+
+
+def test_ayni_anda_ikinci_build_aciklayan_hatayla_reddedilir(tmp_path):
+    import os
+    p = proje(tmp_path)
+    (p.versions_dir / ".build.lock").write_text(str(os.getpid()))
+    with pytest.raises(build.BuildBusy, match="başka bir build"):
+        build.build(p, "ikinci")
+    (p.versions_dir / ".build.lock").write_text("999999999")    # ölmüş süreçten kalan kilit
+    assert build.build(p, "kilit eskimiş")["status"] == "built"
+
+
+def test_main_blogundaki_result_icin_ipucu(tmp_path):
+    model = "if __name__ == '__main__':\n    " + KUTU.replace("\n", "\n    ")
+    out = build.build(proje(tmp_path, model=model), "main")
+    assert out["status"] == "failed" and "__main__" in out["error"]
+
+
+def test_proje_kokundeki_json_py_calistiriciyi_bozamaz(tmp_path):
+    p = proje(tmp_path, model="import helper\n" + KUTU)
+    (p.root / "json.py").write_text("raise RuntimeError('gölge modül')\n")
+    (p.root / "helper.py").write_text("W = 1\n")
+    assert build.build(p, "gölge")["status"] == "built"

@@ -87,3 +87,30 @@ def test_son_basarili_surum(tmp_path):
 
 def p_dir(tmp_path, n):
     return project.open_project(tmp_path / "p").version_dir(n)
+
+
+@pytest.mark.parametrize("satir,eski,beklenen", [
+    ('timeout_s = "abc"', "timeout_s = 600", "export.timeout_s"),
+    ("timeout_s = 0", "timeout_s = 600", "export.timeout_s"),
+    ("stl_tolerance = -1", "stl_tolerance = 0.01", "export.stl_tolerance"),
+    ('process = "cnc"', 'process = "fdm"', "process"),
+    ('name = "../x"', 'name = "p"', "name"),
+    ("name = [", 'name = "p"', "TOML okunamadı"),
+])
+def test_pocad_toml_dogrulanir(tmp_path, satir, eski, beklenen):
+    project.init(tmp_path / "p", name="p")
+    toml = tmp_path / "p" / "pocad.toml"
+    text = toml.read_text()
+    assert eski in text
+    toml.write_text(text.replace(eski, satir, 1))
+    with pytest.raises(ValueError, match=beklenen):
+        project.open_project(tmp_path / "p")
+
+
+@pytest.mark.parametrize("icerik", ["{bozuk", "[]", '{"schema": "pocad-registry-v1"}',
+                                    '{"schema": "pocad-registry-v1", "versions": [{"x": 1}]}'])
+def test_bozuk_kayit_aciklayan_hata_verir(tmp_path, icerik):
+    p = project.init(tmp_path / "p", name="p")
+    (p.versions_dir / "registry.json").write_text(icerik)
+    with pytest.raises(ValueError, match="registry.json"):
+        p.registry().versions()
