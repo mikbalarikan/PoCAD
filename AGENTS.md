@@ -68,9 +68,12 @@ olmalı ve Python ortamında `requirements-cad.txt` kurulu olmalı.
   [mcp_servers.pocad]
   command = "python3"
   args = ["-m", "pocad", "mcp"]
-  env = { PYTHONPATH = "/yol/PoCAD" }
+  env = { PYTHONPATH = "/yol/PoCAD", POCAD_PROJECT = "/yol/proje" }
+  tool_timeout_sec = 660   # build'in kendi sınırı 600 sn; Codex'in varsayılanı daha kısa
   ```
 Telefonda Python proot içindeki Ubuntu'da çalışır; oradaki sarmalayıcı Plan 09'da gelir.
+Agent oturumu kapanınca sunucu ölür; süren bir build'in çalıştırıcısı da bunu fark edip
+kendini durdurur (bekçi süreç, `pocad/build_runner.py`). Yarım kalan sürüm numarası boşa gider.
 
 ## Test yazma kuralları
 - `bin/` betikleri Termux shebang'i taşır ve modül düzeyinde çalışır. Testler onları

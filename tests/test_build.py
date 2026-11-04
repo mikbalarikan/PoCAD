@@ -219,3 +219,35 @@ def test_proje_kokundeki_json_py_calistiriciyi_bozamaz(tmp_path):
     (p.root / "json.py").write_text("raise RuntimeError('gölge modül')\n")
     (p.root / "helper.py").write_text("W = 1\n")
     assert build.build(p, "gölge")["status"] == "built"
+
+
+def test_buildi_baslatan_surec_olurse_model_de_durdurulur(tmp_path):
+    """Agent oturumu kapanınca MCP sunucusu ölür; çalıştırıcı sahipsiz ve zaman sınırsız kalmamalı."""
+    import os
+    import signal
+    import subprocess
+    import sys
+    import time
+
+    from conftest import ROOT
+    p = proje(tmp_path, model="import os, time\nopen('pid.txt', 'w').write(str(os.getpid()))\n"
+              "time.sleep(300)\n" + KUTU, timeout_s=600)
+    kod = f"from pocad import build, project\nbuild.build(project.open_project({str(p.root)!r}), 'yetim')\n"
+    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    sunucu = subprocess.Popen([sys.executable, "-c", kod], env=env)
+    pid_dosyasi = p.root / "pid.txt"
+    for _ in range(200):
+        if pid_dosyasi.exists() and pid_dosyasi.read_text():
+            break
+        time.sleep(0.1)
+    model_pid = int(pid_dosyasi.read_text())
+    sunucu.send_signal(signal.SIGKILL)
+    sunucu.wait()
+    for _ in range(100):
+        if not surec_var(model_pid):
+            break
+        time.sleep(0.1)
+    assert not surec_var(model_pid)
+    p.model.write_text(KUTU)
+    out = build.build(p, "sonraki")                           # ölü kilit ve yarım sürüm engel olmaz
+    assert out["status"] == "built" and out["n"] == 2

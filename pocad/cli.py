@@ -6,7 +6,7 @@
     python -m pocad export [YOL] [--version N]
     python -m pocad report [YOL] [--version N]
     python -m pocad inbox [YOL] [--since TS]
-    python -m pocad reply YOL METİN
+    python -m pocad reply METİN [--path YOL]
     python -m pocad mcp                 MCP sunucusunu stdio üzerinde başlatır
 
 YOL verilmezse POCAD_PROJECT, o da yoksa çalışma dizini kullanılır. --json makine için
@@ -41,8 +41,10 @@ def _parser() -> argparse.ArgumentParser:
     cmd("export", "sürümün çıktı dosyaları").add_argument("--version", type=int)
     cmd("report", "sürümün report.json'u").add_argument("--version", type=int)
     cmd("inbox", "istasyon sayfasından gelen mesajlar").add_argument("--since", type=float, default=0.0)
-    s = cmd("reply", "istasyon sayfasına cevap yaz", path_optional=False)
+    s = sub.add_parser("reply", help="istasyon sayfasına cevap yaz")
     s.add_argument("text", metavar="METİN")
+    s.add_argument("--path", default="", metavar="YOL")
+    s.add_argument("--json", action="store_true", help="JSON çıktı")
     sub.add_parser("mcp", help="MCP sunucusunu stdio üzerinde başlat")
     return ap
 
@@ -54,7 +56,7 @@ def _text(cmd: str, out: dict) -> str:
             latest, built = out["latest"], out["latest_built"]
             lines.append(f"{out['versions']} sürüm; son: " + (f"v{latest['n']} {latest['status']}" if latest else "yok")
                          + "; son başarılı: " + (f"v{built['n']}" if built else "yok"))
-            lines.append(f"okunmamış mesaj: {out['unread_messages']}")
+            lines.append(f"cevapsız mesaj: {out['unanswered_messages']}")
         return "\n".join(lines)
     if cmd == "build":
         head = f"v{out['n']} {out['status']} ({out['duration_s']} sn)"
@@ -73,6 +75,11 @@ def _text(cmd: str, out: dict) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):          # Türkçe çıktı her yerel ayarda (cp1252, C) basılır
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     args = _parser().parse_args(argv)
     if args.cmd == "mcp":
         from pocad import mcp_server
@@ -92,11 +99,17 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "inbox":
             out = api.chat_inbox(args.path, since=args.since)
         else:
-            out = api.chat_reply(args.path, args.text)
+            out = api.chat_reply(args.text, path=args.path)
     except api.PocadError as exc:
         print(f"pocad: {exc}", file=sys.stderr)
         return 1
-    print(json.dumps(out, ensure_ascii=False, indent=2) if args.json else _text(args.cmd, out))
+    except OSError as exc:
+        print(f"pocad: dosya sistemi hatası: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+    try:
+        print(json.dumps(out, ensure_ascii=False, indent=2) if args.json else _text(args.cmd, out))
+    except BrokenPipeError:                          # `pocad status | head -1`
+        sys.stderr.close()
     return 1 if args.cmd == "build" and out["status"] != "built" else 0
 
 

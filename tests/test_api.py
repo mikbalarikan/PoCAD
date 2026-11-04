@@ -12,7 +12,7 @@ def test_init_ve_status(tmp_path):
     assert out["path"] == str((tmp_path / "braket").resolve())
     st = api.project_status(str(tmp_path / "braket"))
     assert st["versions"] == 0 and st["latest"] is None and st["latest_built"] is None
-    assert st["unread_messages"] == 0
+    assert st["unanswered_messages"] == 0
 
 
 def test_var_olan_proje_icin_init_hata(tmp_path):
@@ -51,20 +51,20 @@ def test_reply_outboxa_yazar_inbox_since_ile_suzer(tmp_path):
                      + "bozuk\n", encoding="utf-8")
     assert [m["text"] for m in api.chat_inbox(str(p))["messages"]] == ["a", "b"]
     assert [m["text"] for m in api.chat_inbox(str(p), since=1.0)["messages"]] == ["b"]
-    out = api.chat_reply(str(p), "  v2 hazır  ")
+    out = api.chat_reply("  v2 hazır  ", path=str(p))
     msg = json.loads((p / ".chat" / "outbox.jsonl").read_text(encoding="utf-8"))
     assert out["ok"] and msg["text"] == "v2 hazır" and msg["ts"] == out["ts"]
     with pytest.raises(api.PocadError):
-        api.chat_reply(str(p), "   ")
+        api.chat_reply("   ", path=str(p))
 
 
-def test_okunmamis_mesaj_son_cevaptan_sonrakilerdir(tmp_path):
+def test_cevapsiz_mesaj_son_cevaptan_sonrakilerdir(tmp_path):
     p = tmp_path / "p"
     api.project_init(str(p), name="p")
     (p / ".chat" / "inbox.jsonl").write_text(json.dumps({"ts": 1.0, "text": "a"}) + "\n")
-    assert api.project_status(str(p))["unread_messages"] == 1
-    api.chat_reply(str(p), "tamam")
-    assert api.project_status(str(p))["unread_messages"] == 0
+    assert api.project_status(str(p))["unanswered_messages"] == 1
+    api.chat_reply("tamam", path=str(p))
+    assert api.project_status(str(p))["unanswered_messages"] == 0
 
 
 @pytest.mark.cad
@@ -90,3 +90,35 @@ def test_build_status_export_report(tmp_path):
     assert api.export(p)["n"] == 1                       # son başarılı sürüm hâlâ v1
     with pytest.raises(api.PocadError, match="başarısız"):
         api.export(p, version=2)
+
+
+def test_cevap_uzunluk_siniri(tmp_path):
+    api.project_init(str(tmp_path / "p"), name="p")
+    with pytest.raises(api.PocadError, match="çok uzun"):
+        api.chat_reply("x" * (api.REPLY_CHARS + 1), path=str(tmp_path / "p"))
+
+
+def test_ts_bool_olan_satir_atlanir(tmp_path):
+    p = tmp_path / "p"
+    api.project_init(str(p), name="p")
+    (p / ".chat" / "inbox.jsonl").write_text('{"ts": true, "text": "x"}\n{"ts": 3, "text": "y"}\n')
+    assert [m["text"] for m in api.chat_inbox(str(p))["messages"]] == ["y"]
+
+
+def sahte_surum(tmp_path, rapor_metni):
+    p = tmp_path / "p"
+    pr = api.project_init(str(p), name="p")
+    from pocad import project
+    proj = project.open_project(p)
+    proj.registry().record({"n": 1, "label": "", "status": "built"})
+    proj.version_dir(1).mkdir()
+    (proj.version_dir(1) / "report.json").write_text(rapor_metni)
+    return pr["path"]
+
+
+@pytest.mark.parametrize("metin,beklenen", [('{"status": "built"}', "dosya listesi"),
+                                            ("[1, 2]", "JSON nesnesi değil")])
+def test_bozuk_rapor_aciklayan_hata(tmp_path, metin, beklenen):
+    yol = sahte_surum(tmp_path, metin)
+    with pytest.raises(api.PocadError, match=beklenen):
+        api.export(yol)

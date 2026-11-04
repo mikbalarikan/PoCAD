@@ -48,7 +48,7 @@ def test_reply_ve_inbox(tmp_path):
     (p / ".chat" / "inbox.jsonl").write_text(json.dumps({"ts": 5.0, "text": "merhaba"}) + "\n")
     r = pocad("inbox", str(p), "--since", "1", "--json")
     assert [m["text"] for m in json.loads(r.stdout)["messages"]] == ["merhaba"]
-    assert pocad("reply", str(p), "v1 hazır").returncode == 0
+    assert pocad("reply", "v1 hazır", "--path", str(p)).returncode == 0
     assert "v1 hazır" in (p / ".chat" / "outbox.jsonl").read_text(encoding="utf-8")
 
 
@@ -72,3 +72,23 @@ def test_build_ve_export(tmp_path):
     (p / "model.py").write_text("result = 1\n")
     r = pocad("build", str(p))
     assert r.returncode == 1 and "result" in r.stdout + r.stderr
+
+
+def test_reply_proje_dizininde_yolsuz(tmp_path):
+    pocad("init", str(tmp_path / "p"), "--name", "p")
+    assert pocad("reply", "yolsuz", cwd=tmp_path / "p").returncode == 0
+
+
+def test_dosya_sistemi_hatasi_traceback_basmaz(tmp_path):
+    (tmp_path / "dosya").write_text("x")
+    r = pocad("init", str(tmp_path / "dosya" / "alt"), "--name", "x")
+    assert r.returncode == 1 and r.stderr.startswith("pocad: ") and "Traceback" not in r.stderr
+
+
+def test_utf8_olmayan_yerel_ayarda_turkce_basilir(tmp_path):
+    import os
+    pocad("init", str(tmp_path / "p"), "--name", "p")
+    env = {**os.environ, "PYTHONPATH": str(ROOT), "PYTHONIOENCODING": "latin-1", "PYTHONUTF8": "0"}
+    r = subprocess.run([sys.executable, "-X", "utf8=0", "-m", "pocad", "status", str(tmp_path / "p")],
+                       capture_output=True, env=env, timeout=60)
+    assert r.returncode == 0 and "sürüm".encode() in r.stdout

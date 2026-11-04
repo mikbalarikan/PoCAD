@@ -16,6 +16,7 @@ from pocad import project as _project
 
 SUMMARY = ("solid_count", "brep_valid", "naked_edges", "envelope_size_x", "envelope_size_y", "envelope_size_z",
            "volume_mm3", "stl_max_sagitta")
+REPLY_CHARS = 200_000                    # cad-chat sayfasının kullanıcı mesajına koyduğu sınırla aynı
 _chat_lock = threading.Lock()
 
 
@@ -46,7 +47,8 @@ def project_init(path: str, name: str, process: str = "fdm", machine: str = "") 
 
 
 def project_status(path: str = "") -> dict:
-    """Projenin durumu: son sürüm, son başarılı sürüm, sürüm sayısı, okunmamış mesajlar."""
+    """Projenin durumu: son sürüm, son başarılı sürüm, sürüm sayısı ve cevapsız mesajlar
+    (agent'ın son cevabından sonra gelen kullanıcı mesajları)."""
     p = _open(path)
     try:
         versions = p.registry().versions()
@@ -54,7 +56,7 @@ def project_status(path: str = "") -> dict:
         raise PocadError(str(exc)) from exc
     built = [v for v in versions if v.get("status") == "built"]
     return {**_summary(p), "versions": len(versions), "latest": versions[-1] if versions else None,
-            "latest_built": built[-1] if built else None, "unread_messages": len(_unread(p))}
+            "latest_built": built[-1] if built else None, "unanswered_messages": len(_unanswered(p))}
 
 
 def build(path: str = "", label: str = "") -> dict:
@@ -77,8 +79,11 @@ def export(path: str = "", version: int | None = None) -> dict:
     if rep.get("status") != "built":
         raise PocadError(f"v{n} başarısız bir build; dışa aktarılacak dosyası yok ({rep.get('error')})")
     vdir = p.version_dir(n)
+    files = rep.get("files")
+    if not isinstance(files, dict) or not files:
+        raise PocadError(f"v{n} raporunda dosya listesi yok: {vdir / 'report.json'}")
     return {"n": n, "label": rep.get("label", ""),
-            "files": {name: {"path": str(vdir / name), **info} for name, info in rep["files"].items()}}
+            "files": {name: {"path": str(vdir / name), **info} for name, info in files.items()}}
 
 
 def report(path: str = "", version: int | None = None) -> dict:
@@ -93,12 +98,14 @@ def chat_inbox(path: str = "", since: float = 0.0) -> dict:
     return {"messages": [m for m in _read_jsonl(p.root / ".chat" / "inbox.jsonl") if m["ts"] > since]}
 
 
-def chat_reply(path: str, text: str) -> dict:
+def chat_reply(text: str, path: str = "") -> dict:
     """İstasyon sayfasına cevap yazar (cad-reply ile aynı biçim: .chat/outbox.jsonl)."""
     p = _open(path)
     text = (text or "").strip()
     if not text:
         raise PocadError("boş cevap gönderilemez")
+    if len(text) > REPLY_CHARS:
+        raise PocadError(f"cevap çok uzun ({len(text)} karakter, sınır {REPLY_CHARS}); böl ya da dosyaya yaz")
     ts = time.time()
     outbox = p.root / ".chat" / "outbox.jsonl"
     outbox.parent.mkdir(exist_ok=True)
@@ -125,9 +132,12 @@ def _read_report(p: _project.Project, n: int) -> dict:
     if not path.is_file():
         raise PocadError(f"v{n} yok ya da raporu yazılmamış: {path}")
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as exc:
         raise PocadError(f"{path}: rapor okunamadı ({exc})") from exc
+    if not isinstance(data, dict):
+        raise PocadError(f"{path}: rapor bir JSON nesnesi değil")
+    return data
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -139,12 +149,13 @@ def _read_jsonl(path: Path) -> list[dict]:
             m = json.loads(line)
         except ValueError:
             continue
-        if isinstance(m, dict) and isinstance(m.get("ts"), (int, float)) and isinstance(m.get("text"), str):
+        ts = m.get("ts") if isinstance(m, dict) else None
+        if isinstance(ts, (int, float)) and not isinstance(ts, bool) and isinstance(m.get("text"), str):
             out.append(m)
     return out
 
 
-def _unread(p: _project.Project) -> list[dict]:
+def _unanswered(p: _project.Project) -> list[dict]:
     replies = _read_jsonl(p.root / ".chat" / "outbox.jsonl")
     last = max((m["ts"] for m in replies), default=0.0)
     return [m for m in _read_jsonl(p.root / ".chat" / "inbox.jsonl") if m["ts"] > last]

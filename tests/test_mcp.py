@@ -84,3 +84,13 @@ def test_build_ve_export_mcp_uzerinden(tmp_path):
     b, e = calistir(senaryo)
     assert b["status"] == "built" and b["summary"]["brep_valid"]["measured"] == 1
     assert set(e["files"]) == {"output.step", "output.stl", "output.glb"}
+
+
+def test_dosya_sistemi_hatasi_agenta_sebebiyle_ulasir(tmp_path):
+    (tmp_path / "dosya").write_text("x")
+
+    async def senaryo(s):
+        return await s.call_tool("project_init", {"path": str(tmp_path / "dosya" / "alt"), "name": "x"})
+
+    sonuc = calistir(senaryo)
+    assert sonuc.is_error and "dosya sistemi hatası" in sonuc.content[0].text

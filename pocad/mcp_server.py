@@ -29,6 +29,8 @@ def _tool(fn):
             return fn(*args, **kwargs)
         except api.PocadError as exc:
             raise ToolError(str(exc)) from exc
+        except OSError as exc:                       # izin, disk dolu, yol bir dosya … agent sebebi görsün
+            raise ToolError(f"dosya sistemi hatası: {type(exc).__name__}: {exc}") from exc
     return app.tool()(wrapper)
 
 
@@ -73,9 +75,10 @@ def chat_inbox(path: str = "", since: float = 0.0) -> dict:
 
 
 @_tool
-def chat_reply(path: str, text: str) -> dict:
-    """İstasyon sayfasına cevap yazar. Uzun işlerde ara durum bildirmek için de kullan."""
-    return api.chat_reply(path, text)
+def chat_reply(text: str, path: str = "") -> dict:
+    """İstasyon sayfasına cevap yazar (en fazla 200 000 karakter). Uzun işlerde ara durum bildirmek
+    için de kullan."""
+    return api.chat_reply(text, path=path)
 
 
 def main() -> None:
