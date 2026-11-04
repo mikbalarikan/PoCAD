@@ -1,0 +1,294 @@
+{
+  "title": "pocad-verdict-v1",
+  "description": "One independent review of one build (kaynak: oguz-atolye atolye/schemas/verdict.schema.json @ca27b1b; PLAYBOOK section 6). Every gate row of the spec's section 5 appears in gates, PASS rows included. INCONCLUSIVE is never PASS. A finding blocks when it is a HARD-gate FAIL or INCONCLUSIVE, a missing spec feature, or a NO on the plausibility list; any blocking finding makes the verdict REVISE. No persona text anywhere. Written for claude --json-schema and codex exec --output-schema, so it keeps to the conservative subset of strict structured-output modes: every property required, no additional properties, null only through anyOf, no numeric or string constraints, no references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "review_id",
+    "job_id",
+    "target",
+    "spec_version",
+    "reviewer",
+    "verdict",
+    "summary",
+    "files",
+    "gates",
+    "feature_census",
+    "plausibility",
+    "positive_controls",
+    "findings",
+    "least_sure_answers",
+    "assumptions_relied_on"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "enum": ["pocad-verdict-v1"]
+    },
+    "review_id": {
+      "type": "string",
+      "description": "RV01, RV02, ... in order per job; RETURNED for an incomplete submission, which is not a review."
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "target": {
+      "type": "string",
+      "pattern": "^\\S+$",
+      "description": "The brief's target exactly, one token, e.g. lid_v02; build details go in the markdown, not here."
+    },
+    "spec_version": {
+      "type": "string"
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "model"],
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "enum": ["claude-code", "codex"]
+        },
+        "model": {
+          "type": "string"
+        }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["APPROVED", "APPROVED_ASSUMPTION_CONDITIONAL", "REVISE", "RETURNED"]
+    },
+    "summary": {
+      "type": "string",
+      "description": "One line of engineering facts."
+    },
+    "files": {
+      "type": "array",
+      "description": "Every file the verdict covers; the delivery must carry exactly these bytes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "matches_report"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the job workspace."
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "matches_report": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "description": "One row per gate in the spec's section 5, measured independently from the exported STEP.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "measured", "unit", "required", "margin", "at", "status", "method", "assumes"],
+        "properties": {
+          "gate": {
+            "type": "string",
+            "pattern": "^\\S+$",
+            "description": "The spec §5 row ID exactly, one per row; a row measured in several parts names the others in `at`. jobstate records each entry as a gate event whose gate is one token."
+          },
+          "measured": {
+            "anyOf": [{"type": "number"}, {"type": "null"}],
+            "description": "null only when the status is INCONCLUSIVE or NOT_APPLICABLE; never 0 in place of a missing value."
+          },
+          "unit": {
+            "type": "string",
+            "pattern": "^\\S+$",
+            "description": "mm, deg, mm3, g, count, or bool (1 or 0); one token (mm/10deg, not mm per 10 deg)."
+          },
+          "required": {
+            "type": "string",
+            "description": "The requirement as written in the spec, e.g. >= 1.20."
+          },
+          "margin": {
+            "anyOf": [{"type": "number"}, {"type": "null"}],
+            "description": "Signed distance to the nearest limit, in unit; positive inside the limit."
+          },
+          "at": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "description": "Where the value was measured, e.g. (x, y, z) mm and the feature."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "PASS_ASSUMED", "FAIL", "INCONCLUSIVE", "NOT_APPLICABLE"],
+            "description": "NOT_APPLICABLE only when the spec row names the parts it applies to and this target is not one of them; a row that cannot be measured is INCONCLUSIVE."
+          },
+          "method": {
+            "type": "string",
+            "description": "The tools/measure function or procedure used."
+          },
+          "assumes": {
+            "type": "array",
+            "description": "A-## ledger rows this result rests on; required for PASS_ASSUMED.",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "feature_census": {
+      "type": "array",
+      "description": "Every feature in the design plan, counted in the exported STEP.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["feature", "expected", "found", "status"],
+        "properties": {
+          "feature": {
+            "type": "string",
+            "description": "Plan feature id and name, e.g. F02 bore x4."
+          },
+          "expected": {
+            "type": "string"
+          },
+          "found": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "INCONCLUSIVE"]
+          }
+        }
+      }
+    },
+    "plausibility": {
+      "type": "array",
+      "description": "Every question of the GATES.md plausibility list, answered in one line.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "answer", "status"],
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "Item id and short name, e.g. P1 gravity."
+          },
+          "answer": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["YES", "NO", "NOT_APPLICABLE"]
+          }
+        }
+      }
+    },
+    "positive_controls": {
+      "type": "array",
+      "description": "For each check family used, one mutant of this job's part that the check must FAIL.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "mutant", "got"],
+        "properties": {
+          "check": {
+            "type": "string"
+          },
+          "mutant": {
+            "type": "string"
+          },
+          "got": {
+            "type": "string",
+            "enum": ["FAIL", "PASS", "INCONCLUSIVE"],
+            "description": "Anything but FAIL leaves the gates that rely on this check INCONCLUSIVE."
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Each finding is a spec deviation with a functional-risk rating (D-022). Empty when there are none.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "gate", "kind", "measured", "unit", "required", "margin", "at", "blocks", "risk", "risk_basis", "fix_direction"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "F1, F2, ... within this review."
+          },
+          "gate": {
+            "type": "string",
+            "description": "Gate id, plan feature id, or plausibility item."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "HARD_GATE_FAIL",
+              "HARD_GATE_INCONCLUSIVE",
+              "SOFT_GATE_MISS",
+              "MISSING_FEATURE",
+              "PLAUSIBILITY_NO",
+              "INCOMPLETE_SUBMISSION",
+              "OBSERVATION"
+            ]
+          },
+          "measured": {
+            "anyOf": [{"type": "number"}, {"type": "null"}]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "required": {
+            "type": "string"
+          },
+          "margin": {
+            "anyOf": [{"type": "number"}, {"type": "null"}]
+          },
+          "at": {
+            "anyOf": [{"type": "string"}, {"type": "null"}]
+          },
+          "blocks": {
+            "type": "boolean",
+            "description": "True for every kind except SOFT_GATE_MISS and OBSERVATION."
+          },
+          "risk": {
+            "type": "string",
+            "enum": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+          },
+          "risk_basis": {
+            "type": "string",
+            "description": "One line: why this rating."
+          },
+          "fix_direction": {
+            "type": "string",
+            "description": "What would remove the deviation; the reviewer does not build it."
+          }
+        }
+      }
+    },
+    "least_sure_answers": {
+      "type": "array",
+      "description": "Each item from the REPORT's 'what I am least sure of', and what the review found.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "answer"],
+        "properties": {
+          "item": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "assumptions_relied_on": {
+      "type": "array",
+      "description": "Open A-## rows any PASS rests on; non-empty makes the verdict APPROVED_ASSUMPTION_CONDITIONAL at best.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

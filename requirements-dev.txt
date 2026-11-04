@@ -1,2 +1,3 @@
 pytest>=8
 ruff>=0.6
+numpy>=1.26  # pocad.result numpy sayılarını düz değere çevirir; testleri CAD'siz işte de koşsun
